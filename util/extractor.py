@@ -1,11 +1,10 @@
-import multiprocessing as mp
+from multiprocessing import Pool
 import os
 
 import cv2
 import numpy as np
 from scipy import signal
 from scipy.io import wavfile
-import tqdm
 
 
 class Extractor:
@@ -35,25 +34,32 @@ class Extractor:
         # parse video file information
         vid_path = os.path.join(self.src_vid_dir, vid_file)
         vid_id = os.path.splitext(vid_file)[0][len(self.vid_file_head) :]
-        out_vid_dir = os.path.join(self.out_vid_dir, vid_id)
+        # out_vid_dir = os.path.join(self.out_vid_dir, vid_id)
 
         # video capture initialization with validity check on arguments
-        cap = cv2.VideoCapture(vid_path)
-        total_frame = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        if fps == 0 or self.start_sec + self.interval_sec * self.max_extract > total_frame / fps:
-            print("Error in video FPS or in method arguments, vid_id: {}".format(vid_id))
-            return False
+        try:
+            cap = cv2.VideoCapture(vid_path)
+            if not cap.isOpened():
+                print("Video seems to be corrupted, vid_id: {}".format(vid_id))
+                return False
+            total_frame = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            if fps == 0 or self.start_sec + self.interval_sec * self.max_extract > total_frame / fps:
+                print("Error in video FPS or in method arguments, vid_id: {}".format(vid_id))
+                return False
+        except cv2.error:
+            print("Error occurs within cv2, vid_id: {}".format(vid_id))
+        except:
+            print("Error occurs when opening and parsing video file, vid_id: {}".format(vid_id))
 
-        # make directory for output data
-        if not os.path.isdir(self.out_vid_dir):
-            os.makedirs(self.out_vid_dir)
-        if not os.path.isdir(self.out_aud_dir):
-            os.makedirs(self.out_aud_dir)
-        if not os.path.isdir(out_vid_dir):
+        """
+        # prepare directory for particular video file
+        if not os.path.exists(out_vid_dir):
             os.makedirs(out_vid_dir)
+        """
 
         # extract frames
+        frame_dict = dict()
         extract_cnt = 0
         start = self.start_sec
         end = start + self.interval_sec
@@ -65,7 +71,8 @@ class Extractor:
                 if not success or frame is None:
                     print("Video capture is unsuccessful, vid_id: {}".format(vid_id))
                     return False
-                cv2.imwrite(os.path.join(out_vid_dir, str(extract_cnt) + ".jpg"), frame)
+                frame_dict[str(extract_cnt)] = frame
+                # cv2.imwrite(os.path.join(out_vid_dir, str(extract_cnt) + ".jpg"), frame)
                 # update interval pointers
                 start += self.interval_sec
                 end += self.interval_sec
@@ -73,6 +80,8 @@ class Extractor:
         except:
             print("Error occurs when extracting a frame from video, vid_id: {}".format(vid_id))
             return False
+        # save into npz file
+        np.savez_compressed(os.path.join(self.out_vid_dir, vid_id + ".npz"), **frame_dict)
         return True
 
     def extract_spectrogram(
@@ -90,10 +99,13 @@ class Extractor:
         # parse audio file information
         aud_path = os.path.join(self.src_aud_dir, aud_file)
         aud_id = os.path.splitext(aud_file)[0][len(self.aud_file_head) :]
-        out_aud_dir = os.path.join(self.out_vid_dir, aud_id)
 
         # audio file reading with validity check on arguments
-        rate, sample = wavfile.read(aud_path)
+        try:
+            rate, sample = wavfile.read(aud_path)
+        except:
+            print("Failed to open wav file, aud_id: {}".format(aud_id))
+            return False
         if rate != sr:
             print("Given sampling rate does not match, aud_id: {}".format(aud_id))
             return False
@@ -102,7 +114,14 @@ class Extractor:
             print("Error in audio file or in method arguments, aud_id: {}".format(aud_id))
             return False
 
+        """
+        # prepare directory for particular audio file
+        if not os.path.exists(out_aud_dir):
+            os.makedirs(out_aud_dir)
+        """
+
         # extract spectrograms
+        spec_dict = dict()
         extract_cnt = 0
         start = self.start_sec
         end = start + self.interval_sec
@@ -118,28 +137,38 @@ class Extractor:
                 # normalize spectrogram from max decibel down to tolerance range
                 if normalize:
                     spectrogram = np.clip(spectrogram, np.max(spectrogram) - tolerance, a_max=None)
-                # save into npy foramt
-                np.save(os.path.join(out_aud_dir, str(extract_cnt) + ".npy"), spectrogram)
+                # np.save(os.path.join(out_aud_dir, str(extract_cnt) + ".npy"), spectrogram)
                 # update interval pointers
+                spec_dict[str(extract_cnt)] = spectrogram
                 start += self.interval_sec
                 end += self.interval_sec
                 extract_cnt += 1
         except:
             print("Error occurs when extracting a spectrogram from audio, aud_id: {}".format(aud_id))
             return False
-
+        # save into npz file
+        np.savez_compressed(os.path.join(self.out_aud_dir, aud_id + ".npz"), **spec_dict)
         return True
 
-    def run(self, ncpu=None):
+    def run(self, ncpu=None, fail_fname="fail_id.csv"):
+        # get cpu count
         if ncpu is None:
             ncpu = mp.cpu_count()
-        print("Found {} cpus for extraction.".format(ncpu))
+        print("Using {} processes for extraction.".format(ncpu))
+
+        # make video and audio directory
+        if not os.path.exists(self.out_vid_dir):
+            os.makedirs(self.out_vid_dir)
+        if not os.path.exists(self.out_aud_dir):
+            os.makedirs(self.out_aud_dir)
 
         # prepare video and audio list
         vid_list = os.listdir(self.src_vid_dir)
         aud_list = os.listdir(self.src_aud_dir)
         vid_list.sort()
         aud_list.sort()
+        # vid_list = vid_list[:20]
+        # aud_list = aud_list[:20]
         if len(vid_list) == 0 or len(aud_list) == 0:
             print("Video or audio folder is empty.")
             return
@@ -162,32 +191,33 @@ class Extractor:
         vid_fail = list()
         aud_fail = list()
 
-        # extract frame
-        print("Starting video frame extraction.")
-        with mp.Pool(ncpu) as pool:
+        # multiprocessing
+        with Pool(ncpu) as pool:
+            # extract video frame
             percent = 1
+            print("Starting video frame extraction.")
             for i, success in enumerate(pool.imap(self.extract_frame, vid_list)):
                 if not success:
                     vid_fail.append(i)
                 if i + 1 == int(0.0001 * percent * len(vid_list)):
                     print("Video preprocessing progress: {:.2f}%\r".format(percent / 100), end="")
                     percent += 1
-        print("Video preprocessing finished.")
+            print("Video preprocessing finished.")
 
-        # extract spectrogram
-        print("Starting spectrogram extraction.")
-        with mp.Pool(ncpu) as pool:
+            # extract spectrogram
             percent = 1
+            print("Starting spectrogram extraction.")
             for i, success in enumerate(pool.imap(self.extract_spectrogram, aud_list)):
                 if not success:
                     aud_fail.append(i)
                 if i + 1 == int(0.0001 * percent * len(aud_list)):
                     print("Audio preprocessing progress: {:.2f}%\r".format(percent / 100), end="")
                     percent += 1
-        print("Audio preprocessing finished.")
+            print("Audio preprocessing finished.")
 
         # dump failed id into csv file
-        print("Writing video or audio id failed on extraction.")
+        print("{} videos and {} audios failed to preprocess.".format(len(vid_fail), len(aud_fail)))
+        print("Writing video or audio id failed to preprocess.")
         vid_fail = [vid_list[i] for i in vid_fail]
         aud_fail = [aud_list[i] for i in aud_fail]
         vid_fail_id = set([v[len(self.vid_file_head) : -len(os.path.splitext(v)[1])] for v in vid_fail])
@@ -195,6 +225,7 @@ class Extractor:
         fail_id = list(vid_fail_id | aud_fail_id)
         fail_id.sort()
         fail_id = np.array(fail_id)
-        np.savetxt("fail_id.csv", fail_id, fmt="%s")
+        np.savetxt(fail_fname, fail_id, fmt="%s")
+        print("Saved failed id list in '{}'.".format(fail_fname))
 
-        print("Preprocessing all finished.")
+        print("Preprocessing finished.")
