@@ -3,6 +3,7 @@
 
 # data folder
 data/
+fail*.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -150,7 +150,7 @@ class Extractor:
         np.savez_compressed(os.path.join(self.out_aud_dir, aud_id + ".npz"), **spec_dict)
         return True
 
-    def run(self, ncpu=None, fail_fname="fail_id.csv"):
+    def run(self, ncpu=None, fail_fname="fail.csv"):
         # get cpu count
         if ncpu is None:
             ncpu = mp.cpu_count()
