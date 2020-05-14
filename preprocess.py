@@ -20,5 +20,6 @@ vid_file_head = data_file["vid_file_head"]
 aud_file_head = data_file["aud_file_head"]
 
 if __name__ == "__main__":
+    # preprocess video and audio into npz file
     ext = extractor.Extractor(src_vid_dir, src_aud_dir, out_vid_dir, out_aud_dir, vid_file_head, aud_file_head)
     ext.run(ncpu=8)

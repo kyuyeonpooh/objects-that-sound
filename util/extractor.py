@@ -52,12 +52,6 @@ class Extractor:
         except:
             print("Error occurs when opening and parsing video file, vid_id: {}".format(vid_id))
 
-        """
-        # prepare directory for particular video file
-        if not os.path.exists(out_vid_dir):
-            os.makedirs(out_vid_dir)
-        """
-
         # extract frames
         frame_dict = dict()
         extract_cnt = 0
@@ -72,7 +66,6 @@ class Extractor:
                     print("Video capture is unsuccessful, vid_id: {}".format(vid_id))
                     return False
                 frame_dict[str(extract_cnt)] = frame
-                # cv2.imwrite(os.path.join(out_vid_dir, str(extract_cnt) + ".jpg"), frame)
                 # update interval pointers
                 start += self.interval_sec
                 end += self.interval_sec
@@ -93,8 +86,8 @@ class Extractor:
         nfft=512,
         logscale=True,
         normalize=True,
-        tolerance=80,
-        eps=1e-10,
+        threshold=80,
+        eps=1e-7,
     ):
         # parse audio file information
         aud_path = os.path.join(self.src_aud_dir, aud_file)
@@ -114,12 +107,6 @@ class Extractor:
             print("Error in audio file or in method arguments, aud_id: {}".format(aud_id))
             return False
 
-        """
-        # prepare directory for particular audio file
-        if not os.path.exists(out_aud_dir):
-            os.makedirs(out_aud_dir)
-        """
-
         # extract spectrograms
         spec_dict = dict()
         extract_cnt = 0
@@ -135,9 +122,10 @@ class Extractor:
                 if logscale:
                     spectrogram = 10 * np.log10(spectrogram + eps)
                 # normalize spectrogram from max decibel down to tolerance range
+                """
                 if normalize:
-                    spectrogram = np.clip(spectrogram, np.max(spectrogram) - tolerance, a_max=None)
-                # np.save(os.path.join(out_aud_dir, str(extract_cnt) + ".npy"), spectrogram)
+                    spectrogram = np.clip(spectrogram, np.max(spectrogram) - threshold, a_max=None)
+                """
                 # update interval pointers
                 spec_dict[str(extract_cnt)] = spectrogram
                 start += self.interval_sec
@@ -167,8 +155,6 @@ class Extractor:
         aud_list = os.listdir(self.src_aud_dir)
         vid_list.sort()
         aud_list.sort()
-        # vid_list = vid_list[:20]
-        # aud_list = aud_list[:20]
         if len(vid_list) == 0 or len(aud_list) == 0:
             print("Video or audio folder is empty.")
             return
