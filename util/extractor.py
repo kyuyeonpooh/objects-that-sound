@@ -65,6 +65,8 @@ class Extractor:
                 if not success or frame is None:
                     print("Video capture is unsuccessful, vid_id: {}".format(vid_id))
                     return False
+                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)  # BGR to RGB (cv2 image is BGR)
+                frame = cv2.resize(frame, (224, 224))
                 frame_dict[str(extract_cnt)] = frame
                 # update interval pointers
                 start += self.interval_sec
@@ -120,7 +122,7 @@ class Extractor:
                 )
                 # convert into log-scale spectrogram (magnitude to decibel)
                 if logscale:
-                    spectrogram = 10 * np.log10(spectrogram + eps)
+                    spectrogram = np.log10(spectrogram + eps)
                 # normalize spectrogram from max decibel down to tolerance range
                 """
                 if normalize:
