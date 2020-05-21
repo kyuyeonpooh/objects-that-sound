@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from torch.optim import Adam, SGD
+from torch.optim import Adam
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -8,7 +8,7 @@ from model.avenet import AVENet
 from util.dataset import AudioSet
 
 
-def train(use_cuda=True, epoch=500, lr=1e-4, weight_decay=1e-7):
+def train(use_cuda=True, epoch=500, lr=1e-4, weight_decay=1e-5):
     if use_cuda and torch.cuda.is_available():
         device = torch.device("cuda")
         print("Using GPU for training:", torch.cuda.get_device_name())
@@ -20,7 +20,6 @@ def train(use_cuda=True, epoch=500, lr=1e-4, weight_decay=1e-7):
     avenet = avenet.to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = Adam(avenet.parameters(), lr=lr, weight_decay=weight_decay)
-    # optimizer = SGD(avenet.parameters())
 
     audioset = AudioSet("./data/video", "./data/audio")
     audioset_val = AudioSet("./data/video", "./data/audio", val=True)
