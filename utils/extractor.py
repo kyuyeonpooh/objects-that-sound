@@ -114,7 +114,7 @@ class Extractor:
         end = start + self.interval
         try:
             while seg_count < self.nseg:
-                cur_sample = sample[start * sr : end * sr]
+                cur_sample = sample[int(start * sr) : int(end * sr)]
                 freq, time, spectrogram = signal.spectrogram(
                     cur_sample, fs=sr, nperseg=winsize, noverlap=winsize * overlap, nfft=nfft
                 )
@@ -227,7 +227,7 @@ class Extractor:
                 for i, success in enumerate(pool.imap(partial(self.extract_spectrogram, **kwargs), aud_list)):
                     if not success:
                         aud_fail.append(aud_list[i])
-                    print("Audio preprocessing progress: {} / }\r".format(i + 1, len(aud_list)), end="")
+                    print("Audio preprocessing progress: {} / {}\r".format(i + 1, len(aud_list)), end="")
                 print("Audio preprocessing finished.")
 
         # dump failed id into csv file
