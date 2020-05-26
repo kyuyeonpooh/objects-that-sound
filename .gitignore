@@ -3,10 +3,8 @@
 
 # data folder
 data/
-fail*.csv
-img.pdf
 save/
-log.txt
+csv/preprocess_fail.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
