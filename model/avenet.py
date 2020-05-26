@@ -42,7 +42,7 @@ class AVENet(nn.Module):
         # fusion network
         euc_dist = ((img_emb - aud_emb) ** 2).sum(dim=1, keepdim=True).sqrt()  # Euclidean distance
         out = self.fc3(euc_dist)
-        return out
+        return out, img_emb, aud_emb
 
 
 # forward propagation test

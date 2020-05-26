@@ -20,7 +20,7 @@ class AudioSet(Dataset):
         vid_transforms=None,
         aud_transforms=None,
         max_extract=9,
-        csv="label.csv",
+        csv="csv/label.csv",
         val=False,
         debug=False,
     ):

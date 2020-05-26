@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from model.avenet import AVENet
-from util.dataset import AudioSet
+from utils.dataset import AudioSet
 
 
 def train(use_cuda=True, epoch=500, lr=1e-4, weight_decay=1e-5):
