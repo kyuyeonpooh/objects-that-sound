@@ -10,7 +10,11 @@ class Ontology:
             raw_aso = json.load(data_file)
 
         # 1. format data as a dictionary
-        ## aso["/m/0dgw9r"] > {'restrictions': [u'abstract'], 'child_ids': [u'/m/09l8g', u'/m/01w250', u'/m/09hlz4', u'/m/0bpl036', u'/m/0160x5', u'/m/0k65p', u'/m/01jg02', u'/m/04xp5v', u'/t/dd00012'], 'name': u'Human sounds'}
+        # aso["/m/0dgw9r"] > {
+        #     "restrictions": ["abstract"],
+        #     "child_ids": ["/m/09l8g", "/m/01w250", ..., "/m/04xp5v", "/t/dd00012"],
+        #     "name": "Human sounds"
+        # }
         self.aso = {}
         for category in raw_aso:
             tmp = {}
@@ -80,16 +84,16 @@ if __name__ == "__main__":
     data_dir = "json"
     ontology = Ontology(data_dir)
 
-    # How to show tree path - Example1. Acoustic guitar
+    # How to show tree path - Example 1. Acoustic guitar
     tag = ontology.get_tag("Acoustic guitar")
     tree_path = ontology.get_tree_path(tag)
     ontology.show_path(tree_path)
 
-    # How to show tree path - Example2. Drum
+    # How to show tree path - Example 2. Drum
     tag = ontology.get_tag("Drum")
     tree_path = ontology.get_tree_path(tag)
     ontology.show_path(tree_path)
 
-    # Calculate minimu distance
+    # Calculate minimum distance
     distance = ontology.get_min_distance("Acoustic guitar", "Drum")
     print("Minimum distance: ", distance)
