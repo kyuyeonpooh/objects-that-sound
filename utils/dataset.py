@@ -1,3 +1,11 @@
+# ======================================================================
+# [Note] If you want to run this file for testing batch generation,
+#        please run this file in the root directory.
+# [Example] ~/objects-that-sound$ python utils/dataset.py       (O)
+#           ~/objects-that-sound/utils$ python dataset.py       (X)
+# ======================================================================
+
+
 import os
 import random
 
@@ -13,22 +21,22 @@ from PIL import Image
 class AudioSet(Dataset):
     def __init__(
         self,
-        out_vid_dir,
-        out_aud_dir,
+        src_vid_npz_dir,
+        src_aud_npz_dir,
         vid_shape=(3, 224, 224),
         aud_shape=(1, 257, 199),
         vid_transforms=None,
         aud_transforms=None,
-        max_extract=9,
+        nseg=9,
         csv="csv/label.csv",
         val=False,
         debug=False,
     ):
         # organize video and audio npz files
-        self.src_vid_dir = out_vid_dir
-        self.src_aud_dir = out_aud_dir
-        self.vid_list = os.listdir(self.src_vid_dir)
-        self.aud_list = os.listdir(self.src_aud_dir)
+        self.src_vid_npz_dir = src_vid_npz_dir
+        self.src_aud_npz_dir = src_aud_npz_dir
+        self.vid_list = os.listdir(self.src_vid_npz_dir)
+        self.aud_list = os.listdir(self.src_aud_npz_dir)
         self.vid_list.sort()
         self.aud_list.sort()
         if val:
@@ -48,9 +56,8 @@ class AudioSet(Dataset):
             self.vid_transforms = transforms.Compose(
                 [
                     transforms.ToPILImage(),
-                    # transforms.Resize((224, 224)),
-                    # transforms.RandomHorizontalFlip(),
-                    # transforms.RandomCrop(224, pad_if_needed=True),
+                    transforms.RandomHorizontalFlip(),
+                    transforms.RandomCrop(224),
                     transforms.ToTensor(),
                     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
                 ]
@@ -75,7 +82,7 @@ class AudioSet(Dataset):
             segments = [s[:1] + [s[3:]] for s in segments]
             self.label_dict = dict(segments)
 
-        self.max_extract = max_extract
+        self.nseg = nseg
         self.val = val
         self.debug = debug
 
@@ -111,10 +118,10 @@ class AudioSet(Dataset):
 
         # positive sample
         if idx < self.length:
-            vid_path = os.path.join(self.src_vid_dir, self.vid_list[idx])
-            aud_path = os.path.join(self.src_aud_dir, self.aud_list[idx])
+            vid_path = os.path.join(self.src_vid_npz_dir, self.vid_list[idx])
+            aud_path = os.path.join(self.src_aud_npz_dir, self.aud_list[idx])
 
-            # time_idx = str(random.randrange(0, self.max_extract))
+            # time_idx = str(random.randrange(0, self.nseg))
             vid_arr = np.load(vid_path)[time_idx]
             aud_arr = np.load(aud_path)[time_idx]
 
@@ -136,12 +143,12 @@ class AudioSet(Dataset):
                 aud_id = self.aud_list[aud_idx][:-4]
                 if not (self.get_label_set(vid_id) & self.get_label_set(aud_id)):
                     break
-            vid_path = os.path.join(self.src_vid_dir, self.vid_list[vid_idx])
-            aud_path = os.path.join(self.src_aud_dir, self.aud_list[aud_idx])
+            vid_path = os.path.join(self.src_vid_npz_dir, self.vid_list[vid_idx])
+            aud_path = os.path.join(self.src_aud_npz_dir, self.aud_list[aud_idx])
 
-            # vid_time_idx = str(random.randrange(0, self.max_extract))
+            # vid_time_idx = str(random.randrange(0, self.nseg))
             vid_time_idx = time_idx
-            aud_time_idx = str(random.randrange(0, self.max_extract))
+            aud_time_idx = str(random.randrange(0, self.nseg))
             vid_arr = np.load(vid_path)[vid_time_idx]
             aud_arr = np.load(aud_path)[aud_time_idx]
 
@@ -159,5 +166,8 @@ class AudioSet(Dataset):
 if __name__ == "__main__":
     audioset = AudioSet("./data/video", "./data/audio")
     dataloader = DataLoader(audioset, batch_size=1, shuffle=True)
+    # generate 10 batches
     for i, (img, aud, label) in enumerate(dataloader):
-        break
+        print("Batch #{}".format(i + 1), img.shape, aud.shape, label.shape)
+        if i == 9:
+            break
