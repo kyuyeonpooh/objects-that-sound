@@ -1,6 +1,8 @@
 import os
+import shutil
 from functools import partial
 from multiprocessing import Pool
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -17,8 +19,8 @@ class Extractor:
         dst_aud_dir,
         vid_fname_head="video_",
         aud_fname_head="audio_",
-        vid_ext="mp4",
-        aud_ext="wav",
+        vid_ext=".mp4",
+        aud_ext=".wav",
         nseg=9,
         start_pos=0,
         interval=1,
@@ -135,14 +137,7 @@ class Extractor:
         return True
 
     def run(
-        self,
-        ncpu=8,
-        run_vid=True,
-        run_aud=True,
-        delete_missing_pair=True,
-        delete_failure=True,
-        fail_fname="csv/preprocess_fail.csv",
-        **kwargs
+        self, ncpu=8, remove_unpaired_raw=True, run_vid=True, run_aud=True, failure_fname="./csv/failure.csv", **kwargs
     ):
         # get cpu count
         if ncpu == 0:
@@ -186,25 +181,25 @@ class Extractor:
         print("Checking if video and audio both exist.")
         vid_set = set([vid_file[len(self.vid_fname_head) : -len(self.vid_ext)] for vid_file in vid_list])
         aud_set = set([aud_file[len(self.aud_fname_head) : -len(self.aud_ext)] for aud_file in aud_list])
-        vid_miss = vid_set - aud_set
-        aud_miss = aud_set - vid_set
-        print("{} video files do not have corresponding audio file.".format(len(vid_miss)))
-        print("{} audio files do not have corresponding video file.".format(len(aud_miss)))
+        vid_unpaired = vid_set - aud_set
+        aud_unpaired = aud_set - vid_set
+        print("{} video files do not have corresponding audio file.".format(len(vid_unpaired)))
+        print("{} audio files do not have corresponding video file.".format(len(aud_unpaired)))
         print("Check finished.")
 
         # delete missing files in src directory whose pair does not exist
-        if delete_missing_pair:
+        if remove_unpaired:
             print("Deleting unpaired files.")
-            for vid_file in vid_miss:
+            for vid_file in vid_unpaired:
                 os.remove(os.path.join(self.src_vid_dir, vid_file + self.vid_ext))
-            for aud_file in aud_miss:
+            for aud_file in aud_unpaired:
                 os.remove(os.path.join(self.src_aud_dir, aud_file + self.aud_ext))
             # reassign updated file list
             vid_list = os.listdir(self.src_vid_dir)
             aud_list = os.listdir(self.src_aud_dir)
             vid_list.sort()
             aud_list.sort()
-            print("Deleted {} video and {} audio files.".format(len(vid_miss), len(aud_miss)))
+            print("Deleted {} video and {} audio files.".format(len(vid_unpaired), len(aud_unpaired)))
 
         # failure list
         vid_fail = list()
@@ -230,23 +225,29 @@ class Extractor:
                     print("Audio preprocessing progress: {} / {}\r".format(i + 1, len(aud_list)), end="")
                 print("Audio preprocessing finished.")
 
-        # dump failed id into csv file
-        print("{} videos and {} audios failed to preprocess.".format(len(vid_fail), len(aud_fail)))
-        print("Writing video or audio id failed to preprocess.")
-        vid_fail_id = set([vid_file[len(self.vid_fname_head) : -len(self.vid_ext)] for vid_file in vid_fail])
-        aud_fail_id = set([aud_file[len(self.aud_fname_head) : -len(self.aud_ext)] for aud_file in aud_fail])
-        fail_list = list(vid_fail_id | aud_fail_id)
-        fail_list.sort()
-        fail_list = np.array(fail_list)
-        np.savetxt(fail_fname, fail_list, fmt="%s")
-        print("Saved failed id list in '{}'.".format(fail_fname))
+        # dump failed file id into csv file
+        if failure_fname:
+            print("{} videos and {} audios failed in preprocessing.".format(len(vid_fail), len(aud_fail)))
+            print("Writing video or audio id failed in preprocessing.")
+            vid_fail_id = set([vid_file[len(self.vid_fname_head) : -len(self.vid_ext)] for vid_file in vid_fail])
+            aud_fail_id = set([aud_file[len(self.aud_fname_head) : -len(self.aud_ext)] for aud_file in aud_fail])
+            fail_list = list(vid_fail_id | aud_fail_id)
+            fail_list.sort()
+            fail_list = np.array(fail_list)
+            np.savetxt(failure_fname, fail_list, fmt="%s")
+            print("Saved failed id list in '{}'.".format(failure_fname))
 
-        # delete files failed on preprocessing
-        if delete_failure:
+    def remove_redundant(
+        self, remove_failure=True, remove_unpaired_npz=True, failure_fname="./csv/failure.csv", **kwargs
+    ):
+        # remove files which have been unsucessful in preprocessing
+        if remove_failure:
             vid_rm_count = 0
             aud_rm_count = 0
-            fail_id_list = np.genfromtxt(fail_fname, delimiter=",", dtype=str).tolist()
-            for fail_id in fail_id_list:
+            if not os.path.exists(failure_fname):
+                raise ValueError(failure_fname + "does not exist.")
+            failure_list = np.genfromtxt(failure_fname, delimiter=",", dtype=str).tolist()
+            for fail_id in failure_list:
                 vid_fail_file = os.path.join(self.dst_vid_dir, self.vid_fname_head + fail_id + self.vid_ext)
                 if os.path.exists(vid_fail_file):
                     os.remove(vid_fail_file)
@@ -255,6 +256,118 @@ class Extractor:
                 if os.path.exists(aud_fail_file):
                     os.remove(aud_fail_file)
                     aud_rm_count += 1
-            print("Removed {} video files and {} audio files failed to preprocess.".format(vid_rm_count, aud_rm_count))
+            print(
+                "Removed {} video files and {} audio files failed in preprocessing.".format(vid_rm_count, aud_rm_count)
+            )
 
-        print("Preprocessing all finished.")
+        # remove unpaired npz files
+        if remove_unpaired_npz:
+            vid_rm_count = 0
+            aud_rm_count = 0
+            vid_set = set(os.listdir(self.dst_vid_dir))
+            aud_set = set(os.listdir(self.dst_aud_dir))
+            vid_unpaired = vid_set - aud_set
+            aud_unpaired = aud_set - vid_set
+            for vid_file in vid_unpaired:
+                os.remove(os.path.join(self.dst_vid_dir, vid_file))
+                vid_rm_count += 1
+            for aud_file in aud_unpaired:
+                os.remove(os.path.join(self.dst_aud_dir, aud_file))
+                aud_rm_count += 1
+            print("Removed {} unpaired video files and {} unpaired audio files.".format(vid_rm_count, aud_rm_count))
+
+    def train_val_test_split(
+        self,
+        train_vid_dir,
+        train_aud_dir,
+        val_vid_dir,
+        val_aud_dir,
+        test_vid_dir,
+        test_aud_dir,
+        total=60000,
+        val_size=0.1,
+        test_size=0.1,
+        random_seed=2020,
+        mode="copy",
+        **kwargs
+    ):
+        # validity check on npz files and some size arguments
+        if set(os.listdir(self.dst_vid_dir)) != set(os.listdir(self.dst_aud_dir)):
+            raise AssertionError(
+                "Items in dst_vid_dir and dst_aud_dir should be identical. "
+                + "Please consider running remove_redundant() with remove_failure=True and remove_unpaired_npz=True."
+            )
+        assert val_size >= 0 and test_size >= 0 and val_size + test_size <= 1.0
+        if total > len(os.listdir(self.dst_vid_dir)):
+            raise ValueError(
+                "The total number of train, validation, and test samples should not be bigger than {}.".format(
+                    len(os.listdir(self.dst_vid_dir))
+                )
+            )
+
+        # validity check on file transfer mode
+        if mode == "copy":
+            file_transfer_func = shutil.copy
+        elif mode == "move":
+            file_transfer_func = shutil.move
+        else:
+            raise ValueError("Argument mode should be either copy or move.")
+
+        # validity check on directories
+        dir_list = [train_vid_dir, train_aud_dir, val_vid_dir, val_aud_dir, test_vid_dir, test_aud_dir]
+        for dirname in dir_list:
+            dir_list_other = dir_list.copy()
+            dir_list_other.remove(dirname)
+            for other_dir in dir_list_other:
+                if (Path(dirname) in Path(other_dir).parents) or (Path(other_dir) in Path(dirname).parents):
+                    raise AssertionError("One target directory should not be subset of another target directory.")
+            if (Path(self.dst_vid_dir) in Path(dirname).parents) or (Path(self.dst_aud_dir) in Path(dirname).parents):
+                raise AssertionError("Target directories should not be subset of dst_vid_dir or dst_aud_dir.")
+            if os.path.exists(dirname):
+                if len(os.listdir(dirname)) != 0:
+                    raise AssertionError("Error in {}: target directories should be empty.".format(dirname))
+            else:
+                os.makedirs(dirname)
+
+        nfiles = len(os.listdir(self.dst_vid_dir))  # this is also same to len(os.listdir(self.dst_aud_dir))
+        nval = int(total * val_size)
+        ntest = int(total * test_size)
+        ntrain = total - nval - ntest
+
+        np.random.seed(random_seed)
+        idxs = np.random.choice(nfiles, total, replace=False)
+        np.random.shuffle(idxs)
+
+        train_idxs = idxs[:ntrain]
+        val_idxs = idxs[ntrain : ntrain + nval]
+        test_idxs = idxs[ntrain + nval :]
+        assert ntrain == len(train_idxs)
+        assert nval == len(val_idxs)
+        assert ntest == len(test_idxs)
+
+        vid_npz_list = os.listdir(self.dst_vid_dir)
+        aud_npz_list = os.listdir(self.dst_aud_dir)
+        vid_npz_list.sort()
+        aud_npz_list.sort()
+        vid_npz_list = np.array(vid_npz_list)
+        aud_npz_list = np.array(aud_npz_list)
+
+        # make train set
+        for i, (vid_file_train, aud_file_train) in enumerate(zip(vid_npz_list[train_idxs], aud_npz_list[train_idxs])):
+            file_transfer_func(os.path.join(self.dst_vid_dir, vid_file_train), train_vid_dir)
+            file_transfer_func(os.path.join(self.dst_aud_dir, aud_file_train), train_aud_dir)
+            print("Train data transfer progress: {} / {}\r".format(i + 1, ntrain), end="")
+
+        # make validation set
+        for i, (vid_file_val, aud_file_val) in enumerate(zip(vid_npz_list[val_idxs], aud_npz_list[val_idxs])):
+            file_transfer_func(os.path.join(self.dst_vid_dir, vid_file_val), val_vid_dir)
+            file_transfer_func(os.path.join(self.dst_aud_dir, aud_file_val), val_aud_dir)
+            print("Validation data transfer progress: {} / {}\r".format(i + 1, nval), end="")
+
+        # make test set
+        for i, (vid_file_test, aud_file_test) in enumerate(zip(vid_npz_list[test_idxs], aud_npz_list[test_idxs])):
+            file_transfer_func(os.path.join(self.dst_vid_dir, vid_file_test), test_vid_dir)
+            file_transfer_func(os.path.join(self.dst_aud_dir, aud_file_test), test_aud_dir)
+            print("Test data transfer progress: {} / {}\r".format(i + 1, ntest), end="")
+
+        print("Finished train, validation, and test split.")
