@@ -1,79 +1,173 @@
+# ======================================================================
+# [Note] Please run this file in the root directory.
+# [Example] ~/objects-that-sound$ python train.py           (O)
+#           ~/objects-that-sound/utils$ python ../train.py  (X)
+# ======================================================================
+
+import csv
+import os
+import time
+
 import torch
 import torch.nn as nn
-from torch.optim import Adam
+import torch.optim as optim
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from model.avenet import AVENet
 from utils.dataset import AudioSet
 
 
-def train(use_cuda=True, epoch=500, lr=1e-4, weight_decay=1e-5):
+def train(
+    name_of_run,
+    train_vid_dir,
+    train_aud_dir,
+    val_vid_dir,
+    val_aud_dir,
+    use_cuda=True,
+    epoch=500,
+    batch_size=64,
+    ncpu=8,
+    lr=5e-5,
+    weight_decay=1e-5,
+    use_lr_scheduler=True,
+    csv_log_dir="log",
+    model_save_dir="/hdd/save",
+    **kwargs
+):
+    # gpu settings
     if use_cuda and torch.cuda.is_available():
         device = torch.device("cuda")
         print("Using GPU for training:", torch.cuda.get_device_name())
     else:
+        if use_cuda:
+            print("Failed to find GPU, using CPU instead.")
         device = torch.device("cpu")
     print("Current device:", device)
 
-    avenet = AVENet()
-    avenet = avenet.to(device)
+    # model, loss, and optimizer settings
+    model = AVENet()
+    model.to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = Adam(avenet.parameters(), lr=lr, weight_decay=weight_decay)
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    if use_lr_scheduler:
+        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=16, gamma=0.94)  # lr decreases by 6% every 16 epochs
 
-    audioset = AudioSet("./data/video", "./data/audio")
-    audioset_val = AudioSet("./data/video", "./data/audio", val=True)
-    dataloader = DataLoader(audioset, batch_size=64, shuffle=True, num_workers=6, pin_memory=True)
-    dataloader_val = DataLoader(audioset_val, batch_size=64, shuffle=True, num_workers=6)
+    # dataset, dataloader settings
+    train = AudioSet("train", train_vid_dir, train_aud_dir, **kwargs)
+    val = AudioSet("val", val_vid_dir, val_aud_dir, **kwargs)
+    train_loader = DataLoader(train, batch_size=batch_size, shuffle=True, num_workers=ncpu, pin_memory=True)
+    val_loader = DataLoader(val, batch_size=batch_size, shuffle=True, num_workers=ncpu, pin_memory=True)
 
-    logfile = open("log.txt", "w")
+    # log file and tensorboard settings
+    log_file = open(os.path.join(csv_log_dir, name_of_run + ".csv"), "w")
+    csv_writer = csv.writer(log_file)
+    csv_writer.writerow(["epoch", "train_loss", "train_acc", "val_loss", "val_acc"])
+    tensorboard = SummaryWriter(os.path.join("runs", name_of_run))
+    img_rand, aud_rand = torch.rand(batch_size, 3, 224, 224).to(device), torch.rand(batch_size, 1, 257, 199).to(device)
+    tensorboard.add_graph(model, input_to_model=(img_rand, aud_rand))
 
+    # train with validation
     for e in range(epoch):
         print("Epoch", e + 1)
+
+        # train
         train_loss = 0
         train_correct = 0
-        for i, (img, aud, label) in enumerate(dataloader):
+        train_total = 0
+        model.train()
+        for i, (img, aud, label) in enumerate(train_loader):
             optimizer.zero_grad()
             img, aud, label = img.to(device), aud.to(device), label.to(device)
-            out = avenet(img, aud)
+            out, _, _ = model(img, aud)
             loss = criterion(out, label)
             loss.backward()
             optimizer.step()
             with torch.no_grad():
-                out_indices = torch.argmax(out, dim=1)
+                prediction = torch.argmax(out, dim=1)
                 train_loss += loss.item()
-                train_correct += (label == out_indices).sum().item()
+                train_correct += (label == prediction).sum().item()
+                train_total += label.size(0)
 
-            # log per 100 subepochs
             if (i + 1) % 100 == 0:
-                print(out_indices)
-                with torch.no_grad():
-                    # test on 10 val batches
-                    val_loss = 0
-                    val_correct = 0
-                    for j, (imgval, audval, labelval) in enumerate(dataloader_val):
-                        if j == 10:
-                            break
-                        imgval, audval, labelval = imgval.to(device), audval.to(device), labelval.to(device)
-                        outval = avenet(imgval, audval)
-                        val_loss += criterion(outval, labelval).item()
-                        val_correct += (labelval == torch.argmax(outval, dim=1)).sum().item()
-                    log = "Epoch: {}, Subepoch: {}, Loss: {:.4f}, Acc: {:.4f}, Val_loss:{:.4f}, Val_acc: {:.4f}\n".format(
-                        e + 1,
-                        i + 1,
-                        train_loss / 100,
-                        train_correct / (64 * 100),
-                        val_loss / 10,
-                        val_correct / (64 * 10),
+                train_loss /= 100
+                train_acc = train_correct / train_total
+                # print("train_loss: {:.4f}, train_acc: {:.4f}".format(train_loss, train_acc))
+
+                val_loss = 0
+                val_correct = 0
+                val_total = 0
+                for j, (img, aud, label) in enumerate(val_loader):
+                    img, aud, label = img.to(device), aud.to(device), label.to(device)
+                    with torch.no_grad():
+                        out, _, _ = model(img, aud)
+                        loss = criterion(out, label)
+                        prediction = torch.argmax(out, dim=1)
+                        val_loss += loss.item()
+                        val_correct += (label == prediction).sum().item()
+                        val_total += label.size(0)
+                    if j == 9:
+                        break
+                val_loss /= 10
+                val_acc = val_correct / val_total
+                csv_writer.writerow([e + 1, train_loss, train_acc, val_loss, val_acc])
+                tensorboard.add_scalar("train_loss", train_loss, global_step=e * len(train_loader) + i + 1)
+                tensorboard.add_scalar("train_acc", train_acc, global_step=e * len(train_loader) + i + 1)
+                tensorboard.add_scalar("val_loss", val_loss, global_step=e * len(train_loader) + i + 1)
+                tensorboard.add_scalar("val_acc", val_acc, global_step=e * len(train_loader) + i + 1)
+                print(
+                    "train_loss: {:.4f}, train_acc: {:.4f}, val_loss: {:.4f}, val_acc: {:.4f}".format(
+                        train_loss, train_acc, val_loss, val_acc
                     )
-                    print(log, end="")
-                    logfile.write(log)
-                    train_loss = 0
-                    train_correct = 0
-            # save per 1000 subepochs
-            if (i + 1) % 1000 == 0:
-                torch.save(avenet.state_dict(), "./save/ave_{}_{}.pt".format(e + 1, i + 1))
+                )
+
+                train_loss = 0
+                train_correct = 0
+                train_total = 0
+        """
+        # validation
+        val_loss = 0
+        val_correct = 0
+        val_total = 0
+        model.eval()
+        for img, aud, label in tqdm(val_loader, desc="Val"):
+            img, aud, label = img.to(device), aud.to(device), label.to(device)
+            with torch.no_grad():
+                out, _, _ = model(img, aud)
+                loss = criterion(out, label)
+                prediction = torch.argmax(out, dim=1)
+                val_loss += loss.item()
+                val_correct += (label == prediction).sum().item()
+                val_total += label.size(0)
+        """
+
+        # update lr_scheduler
+        scheduler.step()
+
+        # write log
+        """
+        train_loss /= len(train_loader)
+        train_acc = train_correct / train_total
+        val_loss /= len(val_loader)
+        val_acc = val_correct / val_total
+        csv_writer.writerow([e + 1, train_loss, train_acc, val_loss, val_acc])
+        tensorboard.add_scalar("train_loss", train_loss, global_step=e + 1)
+        tensorboard.add_scalar("train_acc", train_acc, global_step=e + 1)
+        tensorboard.add_scalar("val_loss", val_loss, global_step=e + 1)
+        tensorboard.add_scalar("val_acc", val_acc, global_step=e + 1)
+        print(
+            "train_loss: {:.4f}, train_acc: {:.4f}, val_loss: {:.4f}, val_acc: {:.4f}".format(
+                train_loss, train_acc, val_loss, val_acc
+            )
+        )
+        """
+
+        # save model weight
+        torch.save(model.state_dict(), os.path.join(model_save_dir, name_of_run + "_{}.pt".format(e + 1)))
+
+    log_file.close()
 
 
 if __name__ == "__main__":
-    train()
+    train("AVE_train_no_init", "./data/train/video", "./data/train/audio", "./data/val/video", "./data/val/audio")
