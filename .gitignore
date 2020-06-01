@@ -4,6 +4,8 @@
 # data folder
 data/
 save/
+runs/
+log/
 csv/preprocess_fail.csv
 
 # Byte-compiled / optimized / DLL files

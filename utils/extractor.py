@@ -235,7 +235,7 @@ class Extractor:
             fail_list.sort()
             fail_list = np.array(fail_list)
             np.savetxt(failure_fname, fail_list, fmt="%s")
-            print("Saved failed id list in '{}'.".format(failure_fname))
+            print("Saved failure list in '{}'.".format(failure_fname))
 
     def remove_redundant(
         self, remove_failure=True, remove_unpaired_npz=True, failure_fname="./csv/failure.csv", **kwargs
@@ -357,17 +357,20 @@ class Extractor:
             file_transfer_func(os.path.join(self.dst_vid_dir, vid_file_train), train_vid_dir)
             file_transfer_func(os.path.join(self.dst_aud_dir, aud_file_train), train_aud_dir)
             print("Train data transfer progress: {} / {}\r".format(i + 1, ntrain), end="")
+        print()
 
         # make validation set
         for i, (vid_file_val, aud_file_val) in enumerate(zip(vid_npz_list[val_idxs], aud_npz_list[val_idxs])):
             file_transfer_func(os.path.join(self.dst_vid_dir, vid_file_val), val_vid_dir)
             file_transfer_func(os.path.join(self.dst_aud_dir, aud_file_val), val_aud_dir)
             print("Validation data transfer progress: {} / {}\r".format(i + 1, nval), end="")
+        print()
 
         # make test set
         for i, (vid_file_test, aud_file_test) in enumerate(zip(vid_npz_list[test_idxs], aud_npz_list[test_idxs])):
             file_transfer_func(os.path.join(self.dst_vid_dir, vid_file_test), test_vid_dir)
             file_transfer_func(os.path.join(self.dst_aud_dir, aud_file_test), test_aud_dir)
             print("Test data transfer progress: {} / {}\r".format(i + 1, ntest), end="")
+        print()
 
         print("Finished train, validation, and test split.")
