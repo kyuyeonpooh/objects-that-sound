@@ -16,6 +16,10 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 
+with open("metadata/tags.cls") as fi:
+    tags = map(lambda x: x[:-1], fi.readlines())
+    tags = dict((x, i) for i, x in enumerate(tags))
+
 
 class AudioSet(Dataset):
     def __init__(self, mode, src_vid_npz_dir, src_aud_npz_dir, nseg=9, csv="./csv/label.csv", **kwargs):
@@ -129,9 +133,9 @@ class AudioSet(Dataset):
             else:
                 vid_id = self.get_vid_id(idx)
                 aud_id = self.get_aud_id(idx)
-                vid_tag = self.get_tags(vid_id)[0]
+                vid_tag = torch.tensor(tags[self.get_tags(vid_id)[0]])
                 aud_tag = vid_tag
-                return vid_tensor, aud_tensor, torch.tensor(0), vid_tag, aud_tag, idx
+                return vid_tensor, aud_tensor, torch.tensor(0), vid_tag, aud_tag, torch.tensor(idx)
 
         # negative sample
         elif idx >= self.length:
@@ -166,9 +170,9 @@ class AudioSet(Dataset):
             else:
                 vid_id = self.get_vid_id(vid_idx)
                 aud_id = self.get_aud_id(aud_idx)
-                vid_tag = self.get_tags(vid_id)[0]
-                aud_tag = self.get_tags(aud_id)[0]
-                return vid_tensor, aud_tensor, torch.tensor(1), vid_tag, aud_tag, aud_idx
+                vid_tag = torch.tensor(tags[self.get_tags(vid_id)[0]])
+                aud_tag = torch.tensor(tags[self.get_tags(aud_id)[0]])
+                return vid_tensor, aud_tensor, torch.tensor(1), vid_tag, aud_tag, torch.tensor(aud_idx)
 
         else:
             raise IndexError("Index {} out of range.".format(idx))
