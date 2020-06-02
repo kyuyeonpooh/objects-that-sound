@@ -21,10 +21,11 @@ class AudioSet(Dataset):
     def __init__(self, mode, src_vid_npz_dir, src_aud_npz_dir, nseg=9, csv="./csv/label.csv", **kwargs):
         if mode == "train":
             self.train = True
-        elif mode == "val" or mode == "test":
+        elif mode == "val" or mode == "test" or mode == "embedding":
             self.train = False
         else:
             raise ValueError("Argument mode should be one among train, val, and test.")
+        self.mode = mode
 
         # organize video and audio npz files
         self.src_vid_npz_dir = src_vid_npz_dir
@@ -79,8 +80,14 @@ class AudioSet(Dataset):
             segments = [s[:1] + [s[3:]] for s in segments]
             self.label_dict = dict(segments)
 
-    def get_label_set(self, vid_id):
-        return set(self.label_dict[vid_id])
+    def get_tags(self, vid_id):
+        return self.label_dict[vid_id]
+
+    def get_vid_id(self, vid_idx):
+        return self.vid_list[vid_idx][:-4]
+
+    def get_aud_id(self, aud_idx):
+        return self.aud_list[aud_idx][:-4]
 
     """
     def check_shape(self, vid_tensor, aud_tensor):
@@ -105,7 +112,10 @@ class AudioSet(Dataset):
             vid_path = os.path.join(self.src_vid_npz_dir, self.vid_list[idx])
             aud_path = os.path.join(self.src_aud_npz_dir, self.aud_list[idx])
 
-            time_idx = str(random.randrange(0, self.nseg))
+            if self.train:
+                time_idx = str(random.randrange(0, self.nseg))
+            else:
+                time_idx = str(self.nseg // 2)
             vid_arr = np.load(vid_path)[time_idx]
             aud_arr = np.load(aud_path)[time_idx]
 
@@ -114,7 +124,14 @@ class AudioSet(Dataset):
             assert vid_tensor.shape == (3, 224, 224)
             assert aud_tensor.shape == (1, 257, 199)
 
-            return vid_tensor, aud_tensor, torch.tensor(0)
+            if self.mode != "embedding":
+                return vid_tensor, aud_tensor, torch.tensor(0)
+            else:
+                vid_id = self.get_vid_id(idx)
+                aud_id = self.get_aud_id(idx)
+                vid_tag = self.get_tags(vid_id)[0]
+                aud_tag = vid_tag
+                return vid_tensor, aud_tensor, torch.tensor(0), vid_tag, aud_tag, idx
 
         # negative sample
         elif idx >= self.length:
@@ -131,7 +148,10 @@ class AudioSet(Dataset):
             vid_path = os.path.join(self.src_vid_npz_dir, self.vid_list[vid_idx])
             aud_path = os.path.join(self.src_aud_npz_dir, self.aud_list[aud_idx])
 
-            vid_time_idx = str(random.randrange(0, self.nseg))
+            if self.train:
+                vid_time_idx = str(random.randrange(0, self.nseg))
+            else:
+                vid_time_idx = str(self.nseg // 2)
             aud_time_idx = str(random.randrange(0, self.nseg))
             vid_arr = np.load(vid_path)[vid_time_idx]
             aud_arr = np.load(aud_path)[aud_time_idx]
@@ -141,7 +161,14 @@ class AudioSet(Dataset):
             assert vid_tensor.shape == (3, 224, 224)
             assert aud_tensor.shape == (1, 257, 199)
 
-            return vid_tensor, aud_tensor, torch.tensor(1)
+            if self.mode != "embedding":
+                return vid_tensor, aud_tensor, torch.tensor(1)
+            else:
+                vid_id = self.get_vid_id(vid_idx)
+                aud_id = self.get_aud_id(aud_idx)
+                vid_tag = self.get_tags(vid_id)[0]
+                aud_tag = self.get_tags(aud_id)[0]
+                return vid_tensor, aud_tensor, torch.tensor(1), vid_tag, aud_tag, aud_idx
 
         else:
             raise IndexError("Index {} out of range.".format(idx))
