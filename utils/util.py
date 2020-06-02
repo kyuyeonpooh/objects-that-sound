@@ -8,7 +8,7 @@ def getNumToTagsMap():
     with open("./metadata/mappings.json") as fi:
         mapping = json.loads(fi.read())
 
-    finalTag = map(lambda x: mapping[x], taglist)
+    finalTag = list(map(lambda x: mapping[x], taglist))
     return finalTag
 
 
