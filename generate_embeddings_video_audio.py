@@ -4,11 +4,11 @@ from utils.util import reverseTransform
 from utils.dataset import AudioSet
 import os
 import torch
-    
 
-def generateEmbeddingsForVideoAudio(model_name="avenet.pt", use_cuda=True, use_tags=False):
+
+def generateEmbeddingsForVideoAudio(model_name, use_cuda, use_tags):
     # Get video embeddings on the test set
-    dataset = AudioSet("./data/video", "./data/audio")
+    dataset = AudioSet("embedding", "./data/test/video", "./data/test/audio")
     dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
     print("Loading data.")
     # for img, aud, res, vidTags, audTags, audioSample in dataloader:
@@ -33,7 +33,7 @@ def generateEmbeddingsForVideoAudio(model_name="avenet.pt", use_cuda=True, use_t
         else:
             img, aud, res = data
 
-        #res = res.squeeze(1)
+        # res = res.squeeze(1)
         idx = (res != 2).numpy().astype(bool)
         if idx.sum() == 0:
             continue
@@ -42,18 +42,18 @@ def generateEmbeddingsForVideoAudio(model_name="avenet.pt", use_cuda=True, use_t
         img = torch.Tensor(img.numpy()[idx, :, :, :])
         aud = torch.Tensor(aud.numpy()[idx, :, :, :])
         res = torch.LongTensor(res.numpy()[idx])
-        
+
         if use_tags:
             vidTag = vidTag.numpy()[idx]
             audTag = audTag.numpy()[idx]
             audSamples = audSamples.numpy()[idx]
 
-        #with torch.no_grad():
+        # with torch.no_grad():
         img = img.clone().detach()
         aud = aud.clone().detach()
         res = res.clone().detach()
 
-        #M = img.shape[0]
+        # M = img.shape[0]
         if use_cuda:
             img = img.cuda()
             aud = aud.cuda()
@@ -62,10 +62,8 @@ def generateEmbeddingsForVideoAudio(model_name="avenet.pt", use_cuda=True, use_t
         o, imgEmbed, audEmbed = model(img, aud)
         _, ind = o.max(1)
 
-        
         # Grab the correct indices
         idx = ((ind == res) * (res == 0)).data.cpu().numpy().astype(bool)
-        print(i)
 
         img, aud = reverseTransform(img, aud)
 
@@ -80,22 +78,18 @@ def generateEmbeddingsForVideoAudio(model_name="avenet.pt", use_cuda=True, use_t
 
         if i == 35:
             break
-    
+
     if use_tags:
-        torch.save([imgList, audList, imgEmbedList, audEmbedList, vidTagList, audTagList, audioSampleList], "./save/embeddings/savedEmbeddings.pt")
+        torch.save(
+            [imgList, audList, imgEmbedList, audEmbedList, vidTagList, audTagList, audioSampleList],
+            "savedEmbeddings.pt",
+        )
     else:
-        torch.save([imgList, audList, imgEmbedList, audEmbedList], "./save/embeddings/savedEmbeddings.pt")
-    
+        torch.save([imgList, audList, imgEmbedList, audEmbedList], "savedEmbeddings.pt")
+
+
 def getAVENet(use_cuda=True):
     model = AVENet()
-    # model.fc3.weight.data[0] = -0.1
-    # model.fc3.weight.data[1] =  0.1
-    # model.fc3.bias.data[0] =   1.0
-    # model.fc3.bias.data[1] = - 1.0
-    model.fc3.weight.data[0] = -0.7090
-    model.fc3.weight.data[1] =  0.7090
-    model.fc3.bias.data[0] =   1.2186
-    model.fc3.bias.data[1] = - 1.2186
     if use_cuda:
         model = model.cuda()
 
@@ -103,5 +97,5 @@ def getAVENet(use_cuda=True):
 
 
 if __name__ == "__main__":
-    model_path = './save/ave_model/ave_83_1000.pt'
-    generateEmbeddingsForVideoAudio(model_name=model_path, use_cuda=True, use_tags=False)
+    model_path = "/hdd/save/AVE_train_augment_80.pt"
+    generateEmbeddingsForVideoAudio(model_name=model_path, use_cuda=True, use_tags=True)
