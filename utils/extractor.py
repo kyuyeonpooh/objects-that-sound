@@ -188,12 +188,12 @@ class Extractor:
         print("Check finished.")
 
         # delete missing files in src directory whose pair does not exist
-        if remove_unpaired:
+        if remove_unpaired_raw:
             print("Deleting unpaired files.")
             for vid_file in vid_unpaired:
-                os.remove(os.path.join(self.src_vid_dir, vid_file + self.vid_ext))
+                os.remove(os.path.join(self.src_vid_dir, self.vid_fname_head + vid_file + self.vid_ext))
             for aud_file in aud_unpaired:
-                os.remove(os.path.join(self.src_aud_dir, aud_file + self.aud_ext))
+                os.remove(os.path.join(self.src_aud_dir, self.aud_fname_head + aud_file + self.aud_ext))
             # reassign updated file list
             vid_list = os.listdir(self.src_vid_dir)
             aud_list = os.listdir(self.src_aud_dir)
@@ -248,11 +248,11 @@ class Extractor:
                 raise ValueError(failure_fname + "does not exist.")
             failure_list = np.genfromtxt(failure_fname, delimiter=",", dtype=str).tolist()
             for fail_id in failure_list:
-                vid_fail_file = os.path.join(self.dst_vid_dir, self.vid_fname_head + fail_id + self.vid_ext)
+                vid_fail_file = os.path.join(self.src_vid_dir, self.vid_fname_head + fail_id + self.vid_ext)
                 if os.path.exists(vid_fail_file):
                     os.remove(vid_fail_file)
                     vid_rm_count += 1
-                aud_fail_file = os.path.join(self.dst_aud_dir, self.aud_fname_head + fail_id + self.aud_ext)
+                aud_fail_file = os.path.join(self.src_aud_dir, self.aud_fname_head + fail_id + self.aud_ext)
                 if os.path.exists(aud_fail_file):
                     os.remove(aud_fail_file)
                     aud_rm_count += 1
