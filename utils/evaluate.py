@@ -5,6 +5,7 @@ import numpy as np
 from itertools import combinations
 from ontology import Ontology
 
+
 def get_max_tree_distance(data_dir, tags, debug=False):
     """
     Description:
@@ -26,12 +27,36 @@ def get_max_tree_distance(data_dir, tags, debug=False):
     for item in comb:
         # calculate distance between two tags
         distance = ontology.get_min_distance(item[0], item[1])
-        if debug: print("'%s'-'%s': %d" %(item[0], item[1], distance))
+        if debug:
+            print("'%s'-'%s': %d" % (item[0], item[1], distance))
 
         # update max_dist if distance > max_dist
         max_dist = distance if distance > max_dist else max_dist
-    
+
     return max_dist
+
+
+def get_min_tag_distance(tag_x, tag_y):
+    """
+    Description:
+        Return minimum available tree distance between two videos
+    Parameters:
+        tags_x: tags of one video                
+        tags_y: tags of the other video
+                [Example] 
+        [Example] tags_x = ['Electric Guitar', 'Human Voice']
+                  tags_y = ['Human Voice']
+                  This function with the example above should return 0,
+                  because 'Human Voice' tag exists in both of tag lists.
+
+                  tags_x = ['Piano', 'Guitar', 'Bass Guitar']
+                  tags_y = ['Accordion']
+                  This function with the example above should return the
+                  distance between 'Accordion' and 'Piano', because its distance
+                  will be the smallest among the followings:
+                  'Piano' - 'Accordion', 'Guitar' - 'Accordion', 'Bass Guitar' - 'Accordion'
+    """
+    return min_dist
 
 
 def dist_to_score(data_dir, distances, tags=[], max_dist=-1, debug=False):
@@ -49,10 +74,11 @@ def dist_to_score(data_dir, distances, tags=[], max_dist=-1, debug=False):
         max_tree_distance = max_dist
     elif len(tags) >= 0:
         max_tree_distance = get_max_tree_distance(data_dir, tags)
-    
+
     scores = max_tree_distance - distances
 
     return scores
+
 
 def DCG(scores, alternate=True):
     """
@@ -77,7 +103,7 @@ def DCG(scores, alternate=True):
     # use traditional formula of DCG
     else:
         log2i = np.log2(np.asarray(range(1, n_scores + 1)) + 1)
-        return (scores/log2i).sum()
+        return (scores / log2i).sum()
 
 
 def IDCG(scores, alternate=True):
@@ -94,7 +120,7 @@ def IDCG(scores, alternate=True):
 
     # copy and sort scores in incresing order
     s = sorted(scores)
- 
+
     # convert s in decresing order
     return DCG(s[::-1], alternate)
 
@@ -119,6 +145,7 @@ def NDCG(scores, alternate=True):
 
     return DCG(scores, alternate) / idcg
 
+
 def AP(target, results):
     """
     Description:
@@ -131,21 +158,22 @@ def AP(target, results):
                 
     """
     # initiate variables for average precision
-    n = 1           # the number of result
-    hit = 0         # the number of hit
-    ap = 0          # average precision = 1/hit * sum(precision)
+    n = 1  # the number of result
+    hit = 0  # the number of hit
+    ap = 0  # average precision = 1/hit * sum(precision)
 
     len_target = len(target)
     for res in results:
         (small_set, big_set) = (target, res) if len_target < len(res) else (res, target)
         for item in small_set:
-            if item in big_set: # hit
+            if item in big_set:  # hit
                 hit += 1
                 ap += hit / n
                 break
         n += 1
 
-    return ap/hit
+    return ap / hit
+
 
 def recallAtK(target, results):
     """
@@ -166,41 +194,51 @@ def recallAtK(target, results):
     for res in results:
         (small_set, big_set) = (target, res) if len_target < len(res) else (res, target)
         for item in small_set:
-            if item in big_set: # hit
+            if item in big_set:  # hit
                 recall += 1
                 break
 
-    return recall/K
+    return recall / K
+
 
 if __name__ == "__main__":
-    data_dir = 'json'
-    tags = ['Acoustic guitar', 'Bass guitar', 'Strum', 'Piano',
-            'Independent music', 'Wedding music', 'Scary music', 'Firecracker', 'Drip']
+    data_dir = "json"
+    tags = [
+        "Acoustic guitar",
+        "Bass guitar",
+        "Strum",
+        "Piano",
+        "Independent music",
+        "Wedding music",
+        "Scary music",
+        "Firecracker",
+        "Drip",
+    ]
 
     # Calculate maximum tree distance between tags
     print("Calculate maximum tree distance between tags")
     max_dist = get_max_tree_distance(data_dir, tags, debug=False)
-    print("Maximum tree distance: ", max_dist, end='\n\n')
+    print("Maximum tree distance: ", max_dist, end="\n\n")
 
     # Convert distances to scores with max_dist
     print("Convert distances to scores with max_dist")
     distances = np.array([0, 0, 1, 2, 1, 0, 5, 4, 8, 9])
     print("Distances: ", distances)
     scores = dist_to_score(data_dir, distances, max_dist=max_dist, debug=True)
-    print("Scores: ", scores, end='\n\n')
+    print("Scores: ", scores, end="\n\n")
 
     # Convert distances to scores with tags
     print("Convert distances to scores with tags")
     distances = np.array([0, 0, 1, 2, 1, 0, 5, 4, 8, 9])
     print("Distances: ", distances)
     scores = dist_to_score(data_dir, distances, tags=tags, debug=True)
-    print("Scores: ", scores, end='\n\n')
+    print("Scores: ", scores, end="\n\n")
 
     # Do DCG, IDCG, NDCG
     scores = [3, 2, 3, 0, 1, 2]
     print("### Do DCG ###: ", DCG(scores, alternate=False))
     print("### Do IDCG ###: ", IDCG(scores))
-    print("### Do NDCG ###: ", NDCG(scores), end='\n\n')
+    print("### Do NDCG ###: ", NDCG(scores), end="\n\n")
 
     # Do AP and recall at K
     target = ["a", "b", "c"]
