@@ -119,6 +119,59 @@ def NDCG(scores, alternate=True):
 
     return DCG(scores, alternate) / idcg
 
+def AP(target, results):
+    """
+    Description:
+        Return AP(Average Precision) with target and results
+    Parameters:
+        target: list of K retrieved items (type: list, len: K)
+              [Example] [tag1, tag2, ..., tagK]
+        results: list of N retrieved items (type: list, shape: (N, ?))
+              [Example] [[tagA, tagB, ..., tagG], ..., [tagX, tagY, ..., tagZ]]
+                
+    """
+    # initiate variables for average precision
+    n = 1           # the number of result
+    hit = 0         # the number of hit
+    ap = 0          # average precision = 1/hit * sum(precision)
+
+    len_target = len(target)
+    for res in results:
+        (small_set, big_set) = (target, res) if len_target < len(res) else (res, target)
+        for item in small_set:
+            if item in big_set: # hit
+                hit += 1
+                ap += hit / n
+                break
+        n += 1
+
+    return ap/hit
+
+def recallAtK(target, results):
+    """
+    Description:
+        Return 'recall at k' with target and results
+    Parameters:
+        target: list of K retrieved items (type: list, len: K)
+              [Example] [tag1, tag2, ..., tagK]
+        results: list of N retrieved items (type: list, shape: (N, ?))
+              [Example] [[tagA, tagB, ..., tagG], ..., [tagX, tagY, ..., tagZ]]
+                
+    """
+    # initiate variables for average precision
+    recall = 0
+    K = len(results)
+
+    len_target = len(target)
+    for res in results:
+        (small_set, big_set) = (target, res) if len_target < len(res) else (res, target)
+        for item in small_set:
+            if item in big_set: # hit
+                recall += 1
+                break
+
+    return recall/K
+
 if __name__ == "__main__":
     data_dir = 'json'
     tags = ['Acoustic guitar', 'Bass guitar', 'Strum', 'Piano',
@@ -147,4 +200,10 @@ if __name__ == "__main__":
     scores = [3, 2, 3, 0, 1, 2]
     print("### Do DCG ###: ", DCG(scores, alternate=False))
     print("### Do IDCG ###: ", IDCG(scores))
-    print("### Do NDCG ###: ", NDCG(scores))
+    print("### Do NDCG ###: ", NDCG(scores), end='\n\n')
+
+    # Do AP and recall at K
+    target = ["a", "b", "c"]
+    results = [["a", "g"], ["d", "e", "f", "b"], ["g", "h", "c"], ["y", "k", "p"]]
+    print("### AP ###: ", AP(target, results))
+    print("### Recall at K ###: ", recallAtK(target, results))
