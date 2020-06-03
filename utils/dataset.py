@@ -16,7 +16,7 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 
-with open("metadata/tags.cls") as fi:
+with open("metadata/all_tags.cls") as fi:
     tags = map(lambda x: x[:-1], fi.readlines())
     tags = dict((x, i) for i, x in enumerate(tags))
 
@@ -133,7 +133,7 @@ class AudioSet(Dataset):
             else:
                 vid_id = self.get_vid_id(idx)
                 aud_id = self.get_aud_id(idx)
-                vid_tag = torch.tensor(tags[self.get_tags(vid_id)[0]])
+                vid_tag = list(map(lambda x: tags[x], self.get_tags(vid_id)))
                 aud_tag = vid_tag
                 return vid_tensor, aud_tensor, torch.tensor(0), vid_tag, aud_tag, torch.tensor(idx)
 
@@ -170,8 +170,8 @@ class AudioSet(Dataset):
             else:
                 vid_id = self.get_vid_id(vid_idx)
                 aud_id = self.get_aud_id(aud_idx)
-                vid_tag = torch.tensor(tags[self.get_tags(vid_id)[0]])
-                aud_tag = torch.tensor(tags[self.get_tags(aud_id)[0]])
+                vid_tag = list(map(lambda x: tags[x], self.get_tags(vid_id)))
+                aud_tag = list(map(lambda x: tags[x], self.get_tags(aud_id)))
                 return vid_tensor, aud_tensor, torch.tensor(1), vid_tag, aud_tag, torch.tensor(aud_idx)
 
         else:
@@ -200,11 +200,11 @@ def get_spectrogram_mean_std(src_aud_npz_dir, nseg, mode):
 # batch generation test
 if __name__ == "__main__":
     # get train set
-    train = AudioSet("train", "./data/train/video", "./data/train/audio")
-    train_loader = DataLoader(train, batch_size=1, shuffle=True)
+    train = AudioSet("embedding", "./data/train/video", "./data/train/audio")
+    train_loader = DataLoader(train, batch_size=16, shuffle=True)
 
     # generate 10 batches
-    for i, (img, aud, label) in enumerate(train_loader):
+    for i, (img, aud, label, a, b, c) in enumerate(train_loader):
         print("Batch #{}:".format(i + 1), img.shape, aud.shape, label.shape)
         if i == 9:
             break

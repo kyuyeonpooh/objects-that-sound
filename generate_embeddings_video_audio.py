@@ -9,7 +9,7 @@ import torch
 def generateEmbeddingsForVideoAudio(model_name, use_cuda, use_tags):
     # Get video embeddings on the test set
     dataset = AudioSet("embedding", "./data/test/video", "./data/test/audio")
-    dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+    dataloader = DataLoader(dataset, batch_size=1)
     print("Loading data.")
     # for img, aud, res, vidTags, audTags, audioSample in dataloader:
     # 	break
@@ -44,8 +44,8 @@ def generateEmbeddingsForVideoAudio(model_name, use_cuda, use_tags):
         res = torch.LongTensor(res.numpy()[idx])
 
         if use_tags:
-            vidTag = vidTag.numpy()[idx]
-            audTag = audTag.numpy()[idx]
+            vidTag = torch.cat(tuple(x for x in vidTag)).numpy()
+            audTag = torch.cat(tuple(x for x in audTag)).numpy()
             audSamples = audSamples.numpy()[idx]
 
         # with torch.no_grad():
@@ -63,20 +63,21 @@ def generateEmbeddingsForVideoAudio(model_name, use_cuda, use_tags):
         _, ind = o.max(1)
 
         # Grab the correct indices
-        idx = ((ind == res) * (res == 0)).data.cpu().numpy().astype(bool)
+        idx = ((res == 0)).data.cpu().numpy().astype(bool)
 
-        img, aud = reverseTransform(img, aud)
+        if idx[0]:
+            # img, aud = reverseTransform(img, aud)
 
-        imgList.append(img.data.cpu().numpy()[idx, :])
-        audList.append(aud.data.cpu().numpy()[idx, :])
-        imgEmbedList.append(imgEmbed.data.cpu().numpy()[idx, :])
-        audEmbedList.append(audEmbed.data.cpu().numpy()[idx, :])
-        if use_tags:
-            vidTagList.append(vidTag[idx])
-            audTagList.append(audTag[idx])
-            audioSampleList.append(audSamples[idx])
+            # imgList.append(img.data.cpu().numpy()[idx, :])
+            # audList.append(aud.data.cpu().numpy()[idx, :])
+            imgEmbedList.append(imgEmbed.data.cpu().numpy())
+            audEmbedList.append(audEmbed.data.cpu().numpy())
+            if use_tags:
+                vidTagList.append(vidTag)
+                audTagList.append(audTag)
+                audioSampleList.append(audSamples)
 
-        if i == 35:
+        if i == 6000:
             break
 
     if use_tags:

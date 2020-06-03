@@ -49,11 +49,11 @@ def stob(bool_str, config_name):
 
 
 def save_result(path, query, relevant):
-    with open(path, 'wb') as f:
+    with open(path, "wb") as f:
         pickle.dump(query, f)
         pickle.dump(relevant, f)
-        
-        
+
+
 def load_result(path):
     """
     Description:
@@ -63,7 +63,12 @@ def load_result(path):
     Parameters:
         path: path for pickle file.
     """
-    with open(path, 'rb') as f:
+    with open(path, "rb") as f:
         query = pickle.load(f)
         relevant = pickle.load(f)
         return query, relevant
+
+
+if __name__ == "__main__":
+    query, rele = load_result("results/results.pickle")
+    print(rele)

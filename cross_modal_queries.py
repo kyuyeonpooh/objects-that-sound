@@ -5,29 +5,21 @@ import torch
 import numpy as np
 
 
-def crossModalQueries(embeddings=None, 
-                      topk=5, 
-                      mode1="au", 
-                      mode2="im", 
-                      use_tags=False,
-                      result_path=None,
-                      plot=False
-                      ):
-    
+def crossModalQueries(embeddings=None, topk=5, mode1="au", mode2="im", use_tags=False, result_path=None, plot=False):
+
     if plot and topk != 5:
         raise ValueError("When plot is True, topk must be 5.")
-    
-    
+
     finalTag = getNumToTagsMap()
-    #print(finalTag)
+    # print(finalTag)
 
     for r, di, files in os.walk("data/test_audio"):
         audioFiles = sorted(files)
 
     t = torch.load(embeddings)
-    for i in range(len(t)):
-        t[i] = np.concatenate(t[i])
 
+    for i in [2, 3]:
+        t[i] = np.concatenate(t[i])
     # Generalize here
     if len(t) == 6:
         imgList, audList, imgEmbedList, audEmbedList, vidTagList, audTagList = t
@@ -41,17 +33,17 @@ def crossModalQueries(embeddings=None,
     print("Loaded embeddings.")
 
     # imgList = bgr2rgb(imgList)
-    
-    print("Size of data : " + str(imgList.shape[0]))
+
+    print("Size of data : " + str(len(imgEmbedList)))
 
     # Open a file and store your queries here
     res = open("results/results_{0}_{1}.txt".format(mode1, mode2), "w+")
 
     assert mode1 != mode2
-    
+
     res_queries = []
     res_tags = []
-    for i in range(imgEmbedList.shape[0]):
+    for i in range(len(imgEmbedList)):
         if mode1 == "im":
             embed = imgEmbedList[i]
         else:
@@ -66,7 +58,7 @@ def crossModalQueries(embeddings=None,
         # Sort arguments
         idx = dist.argsort()[:topk]
         if use_tags:
-            #print(vidTagList[idx])
+            # print(vidTagList[idx])
             pass
         if plot:
             plt.clf()
@@ -76,9 +68,9 @@ def crossModalQueries(embeddings=None,
         if use_tags:
             if plot:
                 ax = plt.subplot(2, 3, 1)
-                ax.set_title("Query: " + finalTag[vidTagList[i]])
-            res_query = finalTag[vidTagList[i]]
-        
+                ax.set_title("Query: " + str([finalTag[x] for x in vidTagList[i]]))
+            res_query = [finalTag[x] for x in vidTagList[i]]
+
         if plot:
             plt.axis("off")
             plt.imshow(imgList[i].transpose(1, 2, 0))
@@ -87,16 +79,17 @@ def crossModalQueries(embeddings=None,
         res_tag = []
         for j in range(num_fig):
             if use_tags:
+                res_tag_ = [finalTag[x] for x in vidTagList[idx[j]]]
                 if plot:
                     ax = plt.subplot(2, 3, j + 2)
-                    ax.set_title(finalTag[vidTagList[idx[j]]])
-                res_tag.append(finalTag[vidTagList[idx[j]]])
+                    ax.set_title(str(res_tag_))
+                res_tag.append(res_tag_)
             if plot:
                 plt.imshow(imgList[idx[j]].transpose(1, 2, 0))
                 plt.axis("off")
 
         # plt.tight_layout()
-        
+
         if plot:
             plt.draw()
             plt.pause(0.001)
@@ -115,7 +108,7 @@ def crossModalQueries(embeddings=None,
         #         line = ", ".join(tmpFiles)
         #         res.write(line + "\n")
         #     plt.savefig("results/embed_{0}_{1}_{2}.png".format(mode1, mode2, i))
-        
+
         res_queries.append(res_query)
         res_tags.append(res_tag)
     save_result(result_path, res_queries, res_tags)
@@ -123,13 +116,14 @@ def crossModalQueries(embeddings=None,
 
 
 if __name__ == "__main__":
-    embedding_path = "save/embeddings/savedEmbeddings.pt"
-    result_path = './results/results_au_im.pickle'
-    crossModalQueries(embeddings=embedding_path, 
-                      topk=5, 
-                      mode1="im", 
-                      mode2="au", 
-                      use_tags=True,
-                      result_path=result_path,
-                      plot=False # Warning: when topk is not 5, plot should be False
-                      )
+    embedding_path = "savedEmbeddings.pt"
+    result_path = "./results/results.pickle"
+    crossModalQueries(
+        embeddings=embedding_path,
+        topk=5,
+        mode1="im",
+        mode2="au",
+        use_tags=True,
+        result_path=result_path,
+        plot=False,  # Warning: when topk is not 5, plot should be False
+    )
