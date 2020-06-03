@@ -1,8 +1,9 @@
 import json
+import pickle
 
 
 def getNumToTagsMap():
-    with open("./metadata/tags.cls") as fi:
+    with open("./metadata/all_tags.cls") as fi:
         taglist = map(lambda x: x[:-1], fi.readlines())
 
     with open("./metadata/mappings.json") as fi:
@@ -45,3 +46,24 @@ def stob(bool_str, config_name):
         raise ValueError(
             "Configuration {} will only accept one among True, true, False, and false.".format(config_name)
         )
+
+
+def save_result(path, query, relevant):
+    with open(path, 'wb') as f:
+        pickle.dump(query, f)
+        pickle.dump(relevant, f)
+        
+        
+def load_result(path):
+    """
+    Description:
+        Return two lists: 
+        - list1: query.
+        - list2: top k relevants.
+    Parameters:
+        path: path for pickle file.
+    """
+    with open(path, 'rb') as f:
+        query = pickle.load(f)
+        relevant = pickle.load(f)
+        return query, relevant
