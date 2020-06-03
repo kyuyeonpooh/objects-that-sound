@@ -7,8 +7,12 @@ import numpy as np
 def imageToImageQueries(embeddings=None, 
                         topk=5, 
                         use_tags=False, 
-                        result_path=None
+                        result_path=None,
+                        plot=False
                         ):
+
+    if plot and topk != 5:
+        raise ValueError("When plot is True, topk must be 5.")
 
     finalTag = getNumToTagsMap()
     #print(finalTag)
@@ -31,7 +35,7 @@ def imageToImageQueries(embeddings=None,
 
     print("Loaded embeddings.")
 
-    #flag = True
+    print("Size of data : " + str(imgList.shape[0]))
 
     res_queries = []
     res_tags = []
@@ -41,28 +45,35 @@ def imageToImageQueries(embeddings=None,
         idx   = dist.argsort()[:topk]
         if use_tags:
             print(vidTagList[idx])
-        plt.clf()
+    
         num_fig = idx.shape[0]
-        ax = plt.subplot(1, 3, 1)
+        if plot:
+            plt.clf()
+            ax = plt.subplot(1, 3, 1)
         
         if use_tags:
-            ax.set_title(finalTag[vidTagList[idx[0]]])
+            if plot:
+                ax.set_title(finalTag[vidTagList[idx[0]]])
             res_query = finalTag[vidTagList[idx[0]]]
-        plt.axis("off")
-        plt.imshow(imgList[idx[0]].transpose(1,2,0))
+        if plot:
+            plt.axis("off")
+            plt.imshow(imgList[idx[0]].transpose(1,2,0))
         
         res_tag = []
         for j in range(1, num_fig):
             ax = plt.subplot(2, 3, j+1 + int(j/3))
             if use_tags:
-                ax.set_title(finalTag[vidTagList[idx[j]]])
+                if plot:
+                    ax.set_title(finalTag[vidTagList[idx[j]]])
                 res_tag.append(finalTag[vidTagList[idx[j]]])
-            plt.imshow(imgList[idx[j]].transpose(1,2,0))
-            plt.axis("off")
+            if plot:
+                plt.imshow(imgList[idx[j]].transpose(1,2,0))
+                plt.axis("off")
 
         # plt.tight_layout()
         #plt.draw()
         #plt.pause(0.001)
+        #flag = True
         #if flag:
         #    input()
         #    flag = False
@@ -81,5 +92,6 @@ if __name__ == "__main__":
     imageToImageQueries(embeddings=embedding_path, 
                         topk=5,
                         use_tags=True, 
-                        result_path=result_path
+                        result_path=result_path,
+                        plot=False # Warning: when topk is not 5, plot should be False
                         )
