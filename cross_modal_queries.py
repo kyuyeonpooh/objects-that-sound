@@ -30,7 +30,7 @@ def crossModalQueries(embeddings="savedEmbeddings.pt", topk=5, mode1="au", mode2
 
     # imgList = bgr2rgb(imgList)
     flag = True
-    print(imgList.shape[0])
+    print("Number of data : " + str(imgList.shape[0]))
 
     # Open a file and store your queries here
     res = open("results/results_{0}_{1}.txt".format(mode1, mode2), "w+")
@@ -77,12 +77,14 @@ def crossModalQueries(embeddings="savedEmbeddings.pt", topk=5, mode1="au", mode2
         if flag:
             input()
             flag = False
-        res = input("Do you want to save?")
-        if res == "y":
+        ans = input("Do you want to save? (quit: q): ")
+        if ans == "q":
+            break
+        elif ans == "y":
             if mode1 == "au":
-                res.write(audioFiles[audioSampleList[i, 0]] + "\n")
+                res.write(audioFiles[audioSampleList[i]] + "\n")
             else:
-                tmpFiles = map(lambda x: audioFiles[audioSampleList[x, 0]], idx)
+                tmpFiles = map(lambda x: audioFiles[audioSampleList[x]], idx)
                 line = ", ".join(tmpFiles)
                 res.write(line + "\n")
 
@@ -91,5 +93,5 @@ def crossModalQueries(embeddings="savedEmbeddings.pt", topk=5, mode1="au", mode2
 
 
 if __name__ == "__main__":
-    embedding_path = "savedEmbeddings.pt"
+    embedding_path = "save/embeddings/savedEmbeddings.pt"
     crossModalQueries(embeddings=embedding_path, topk=5, mode1="au", mode2="im", use_tags=True)
