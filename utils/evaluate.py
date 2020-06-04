@@ -3,6 +3,7 @@ import os
 import sys
 
 import numpy as np
+from util import load_result
 from itertools import combinations
 from itertools import product
 from ontology import Ontology
@@ -151,6 +152,31 @@ def NDCG(scores, alternate=True):
 
     return DCG(scores, alternate) / idcg
 
+def do_NDCG(ontology, queries, ret_items, tags):
+    """
+    Description:
+        Return Average nDCG for queries and ret_item
+    Parameters:
+        queries: list of N queries (type: list, dimension: 2D, shape: (N, ?))
+              [Example] [[tag1, tag2, ..., tagK], ..., [tagA, tagB, ..., tagG]]
+        results: list of N retrieved items (type: list, dimension: 3D, shape: (N, ?, ?))
+              [Example] [[[tagA, tagB, ..., tagG], ..., [tagX, tagY, ..., tagZ]], ... , [ ... ]]
+                
+    """
+    N = len(queries)
+    ndcgs = 0
+    
+    # get max_tree_distance
+    max_tree_distance = get_max_tree_distance(ontology, tags, debug=False)
+
+    # for every query, calculate nDCG
+    for i in range(N):
+        distances = np.asarray([ get_min_tag_distance(ontology, queries[i], ret_items[i][j]) for j in range(len(ret_items[i])) ])
+        scores = dist_to_score(ontology, distances, max_dist=max_tree_distance)
+        ndcgs += NDCG(scores)
+    
+    return ndcgs / N
+
 
 def AP(target, results):
     """
@@ -262,4 +288,19 @@ if __name__ == "__main__":
     # Do get_min_tag_distance: example2
     tags_x = ['Piano', 'Guitar', 'Bass guitar']
     tags_y = ['Accordion']
-    print("@@@ get_min_tag_distance2 @@@: ", get_min_tag_distance(ontology, tags_x, tags_y))
+    print("@@@ get_min_tag_distance2 @@@: ", get_min_tag_distance(ontology, tags_x, tags_y), end="\n\n")
+
+    # Do average nDCG
+    with open("metadata/all_tags.cls") as fi:
+        tags = map(lambda x: x[:-1], fi.readlines())
+        tags = dict((x, i) for i, x in enumerate(tags))
+
+    file_names = [
+        'metadata/results_a2i.pickle', 'metadata/results_i2a.pickle', 
+        'metadata/results_a2i_30.pickle', 'metadata/results_i2a_30.pickle',
+        ]
+    
+    for f in file_names:
+        queries, ret_items = load_result(f)
+        ndcgs = do_NDCG(ontology, queries, ret_items, tags)
+        print("### average nDCG:%s ###: " % (f), ndcgs, end="\n\n")
