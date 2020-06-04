@@ -2,6 +2,7 @@ absl-py==0.9.0
 appdirs==1.4.3
 astor==0.8.1
 astroid==2.3.3
+astunparse==1.6.3
 attrs==19.3.0
 audioread==2.1.8
 autopep8==1.5.2
@@ -16,8 +17,9 @@ click==7.1.2
 cycler==0.10.0
 decorator==4.4.2
 defusedxml==0.6.0
+easydict==1.9
 entrypoints==0.3
-gast==0.2.2
+gast==0.3.3
 google-auth==1.14.1
 google-auth-oauthlib==0.4.1
 google-pasta==0.2.0
@@ -95,9 +97,11 @@ scipy==1.4.1
 Send2Trash==1.5.0
 six==1.14.0
 SoundFile==0.10.3.post1
-tensorboard==2.1.1
+tensorboard==2.2.1
+tensorboard-plugin-wit==1.6.0.post3
 tensorflow==2.1.0
-tensorflow-estimator==2.1.0
+tensorflow-estimator==2.2.0
+tensorflow-gpu==2.2.0
 termcolor==1.1.0
 terminado==0.8.3
 testpath==0.4.4

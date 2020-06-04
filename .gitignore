@@ -6,7 +6,8 @@ data/
 save/
 runs/
 log/
-csv/preprocess_fail.csv
+results/
+*.pt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
