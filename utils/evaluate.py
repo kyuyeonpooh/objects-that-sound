@@ -1,12 +1,14 @@
 import math
 import os
+import sys
 
 import numpy as np
 from itertools import combinations
+from itertools import product
 from ontology import Ontology
 
 
-def get_max_tree_distance(data_dir, tags, debug=False):
+def get_max_tree_distance(ontology, tags, debug=False):
     """
     Description:
         Return max tree distance which can be derived with given tag list.
@@ -14,8 +16,6 @@ def get_max_tree_distance(data_dir, tags, debug=False):
         tags: list of tags used in training. (type: list)
               [Example] ['Acoustic guitar', 'Electric Guitar', ..., 'Piano']
     """
-    # initiate ontology tree
-    ontology = Ontology(data_dir)
 
     # create combination between tags
     comb = combinations(tags, 2)
@@ -36,7 +36,7 @@ def get_max_tree_distance(data_dir, tags, debug=False):
     return max_dist
 
 
-def get_min_tag_distance(tag_x, tag_y):
+def get_min_tag_distance(ontology, tags_x, tags_y):
     """
     Description:
         Return minimum available tree distance between two videos
@@ -56,10 +56,16 @@ def get_min_tag_distance(tag_x, tag_y):
                   will be the smallest among the followings:
                   'Piano' - 'Accordion', 'Guitar' - 'Accordion', 'Bass Guitar' - 'Accordion'
     """
+    products = product(tags_x, tags_y)
+    min_dist = sys.maxsize
+    for x, y in products:
+        distance = ontology.get_min_distance(x, y)
+        min_dist = min_dist if min_dist < distance else distance
+
     return min_dist
 
 
-def dist_to_score(data_dir, distances, tags=[], max_dist=-1, debug=False):
+def dist_to_score(ontology, distances, tags=[], max_dist=-1, debug=False):
     """ 
     Description:
         Convert distances of K retrieved items into scores
@@ -73,7 +79,7 @@ def dist_to_score(data_dir, distances, tags=[], max_dist=-1, debug=False):
     if max_dist >= 0:
         max_tree_distance = max_dist
     elif len(tags) >= 0:
-        max_tree_distance = get_max_tree_distance(data_dir, tags)
+        max_tree_distance = get_max_tree_distance(ontology, tags)
 
     scores = max_tree_distance - distances
 
@@ -215,23 +221,25 @@ if __name__ == "__main__":
         "Drip",
     ]
 
+    ontology = Ontology(data_dir)
+
     # Calculate maximum tree distance between tags
     print("Calculate maximum tree distance between tags")
-    max_dist = get_max_tree_distance(data_dir, tags, debug=False)
+    max_dist = get_max_tree_distance(ontology, tags, debug=False)
     print("Maximum tree distance: ", max_dist, end="\n\n")
 
     # Convert distances to scores with max_dist
     print("Convert distances to scores with max_dist")
     distances = np.array([0, 0, 1, 2, 1, 0, 5, 4, 8, 9])
     print("Distances: ", distances)
-    scores = dist_to_score(data_dir, distances, max_dist=max_dist, debug=True)
+    scores = dist_to_score(ontology, distances, max_dist=max_dist, debug=True)
     print("Scores: ", scores, end="\n\n")
 
     # Convert distances to scores with tags
     print("Convert distances to scores with tags")
     distances = np.array([0, 0, 1, 2, 1, 0, 5, 4, 8, 9])
     print("Distances: ", distances)
-    scores = dist_to_score(data_dir, distances, tags=tags, debug=True)
+    scores = dist_to_score(ontology, distances, tags=tags, debug=True)
     print("Scores: ", scores, end="\n\n")
 
     # Do DCG, IDCG, NDCG
@@ -244,4 +252,14 @@ if __name__ == "__main__":
     target = ["a", "b", "c"]
     results = [["a", "g"], ["d", "e", "f", "b"], ["g", "h", "c"], ["y", "k", "p"]]
     print("### AP ###: ", AP(target, results))
-    print("### Recall at K ###: ", recallAtK(target, results))
+    print("### Recall at K ###: ", recallAtK(target, results), end="\n\n")
+
+    # Do get_min_tag_distance: example1
+    tags_x = ['Independent music', 'Drip']
+    tags_y = ['Drip']
+    print("@@@ get_min_tag_distance1 @@@: ", get_min_tag_distance(ontology, tags_x, tags_y))
+
+    # Do get_min_tag_distance: example2
+    tags_x = ['Piano', 'Guitar', 'Bass guitar']
+    tags_y = ['Accordion']
+    print("@@@ get_min_tag_distance2 @@@: ", get_min_tag_distance(ontology, tags_x, tags_y))
