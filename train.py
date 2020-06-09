@@ -16,6 +16,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from model.avenet import AVENet
+from model.avolnet import AVOLNet
 from utils.dataset import AudioSet
 
 
@@ -32,8 +33,9 @@ def train(
     lr=5e-5,
     weight_decay=1e-5,
     use_lr_scheduler=True,
-    csv_log_dir="log",
-    model_save_dir="/hdd/save",
+    csv_log_dir="runs/",
+    model_save_dir="./save/avol_model",
+    model = "AVE",
     **kwargs
 ):
     # gpu settings
@@ -47,9 +49,16 @@ def train(
     print("Current device:", device)
 
     # model, loss, and optimizer settings
-    model = AVENet()
+    if model == "AVE":
+        model = AVENet()
+    else:
+        model = AVOLNet()
     model.to(device)
-    criterion = nn.CrossEntropyLoss()
+    
+    if model == "AVE":
+        criterion = nn.CrossEntropyLoss()
+    else:
+        criterion = nn.BCELoss()
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     if use_lr_scheduler:
         scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=16, gamma=0.94)  # lr decreases by 6% every 16 epochs
@@ -80,12 +89,19 @@ def train(
         for i, (img, aud, label) in enumerate(train_loader):
             optimizer.zero_grad()
             img, aud, label = img.to(device), aud.to(device), label.to(device)
-            out, _, _ = model(img, aud)
+            if model == "AVE":
+                out, _, _ = model(img, aud)
+            else:
+                out, _ = model(img, aud)
+                label = label.float()
             loss = criterion(out, label)
             loss.backward()
             optimizer.step()
             with torch.no_grad():
-                prediction = torch.argmax(out, dim=1)
+                if model == "AVE":
+                    prediction = torch.argmax(out, dim=1)
+                else:
+                    prediction = torch.round(out)
                 train_loss += loss.item()
                 train_correct += (label == prediction).sum().item()
                 train_total += label.size(0)
@@ -101,9 +117,16 @@ def train(
                 for j, (img, aud, label) in enumerate(val_loader):
                     img, aud, label = img.to(device), aud.to(device), label.to(device)
                     with torch.no_grad():
-                        out, _, _ = model(img, aud)
-                        loss = criterion(out, label)
-                        prediction = torch.argmax(out, dim=1)
+                        if model == "AVE":
+                            out, _, _ = model(img, aud)
+                        else:
+                            out, _ = model(img, aud)
+                            label = label.float()
+                        loss = criterion(out, label)      
+                        if model == "AVE":
+                            prediction = torch.argmax(out, dim=1)
+                        else:
+                            prediction = torch.round(out)
                         val_loss += loss.item()
                         val_correct += (label == prediction).sum().item()
                         val_total += label.size(0)
@@ -170,4 +193,4 @@ def train(
 
 
 if __name__ == "__main__":
-    train("AVE_train_no_init", "./data/train/video", "./data/train/audio", "./data/val/video", "./data/val/audio")
+    train("AVOL_train_model", "./data/train/video", "./data/train/audio", "./data/val/video", "./data/val/audio", model="AVOL")
