@@ -24,7 +24,12 @@ class AVOLNet(nn.Module):
         self.fus_conv7 = nn.Conv2d(1, 1, 1)
         self.fus_sig = nn.Sigmoid()
         self.fus_pool = nn.AdaptiveMaxPool2d(1)
-
+        #self.fus_fc = nn.Linear(1, 2)
+        # self.fus_fc.weight.data[0] = -0.7
+        # self.fus_fc.weight.data[1] = 0.7
+        # self.fus_fc.bias.data[0] = 1.2
+        # self.fus_fc.bias.data[1] = -1.2
+        
     def forward(self, img, aud):
         # image subnetwork
         img = self.icn(img)
@@ -44,7 +49,8 @@ class AVOLNet(nn.Module):
         scalar_prod = torch.bmm(aud, img).view(aud.size(0), 1, 14, 14)
         loc = self.fus_conv7(scalar_prod)
         loc = self.fus_sig(loc)
-        out = self.fus_pool(loc)
+        out = self.fus_pool(loc).squeeze()
+        #out = self.fus_fc(out)
         
         return out, loc
 
