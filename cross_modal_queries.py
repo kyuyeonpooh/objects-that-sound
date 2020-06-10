@@ -13,9 +13,9 @@ def crossModalQueries(embeddings=None, topk=5, mode1="au", mode2="im", use_tags=
     finalTag = getNumToTagsMap()
     # print(finalTag)
 
-    for r, di, files in os.walk("AVE_small_data/test/audio/"):
+    for r, di, files in os.walk("./data/test/audio"):
         audioFiles = sorted(files)
-    
+
     t = torch.load(embeddings)
 
     for i in [2, 3]:
@@ -73,7 +73,7 @@ def crossModalQueries(embeddings=None, topk=5, mode1="au", mode2="im", use_tags=
 
         if plot:
             plt.axis("off")
-            plt.imshow(imgList[i].transpose(1, 2, 0))
+            plt.imshow(imgList[i].squeeze().transpose(1, 2, 0))
 
         # Top k matches
         res_tag = []
@@ -85,7 +85,7 @@ def crossModalQueries(embeddings=None, topk=5, mode1="au", mode2="im", use_tags=
                     ax.set_title(str(res_tag_))
                 res_tag.append(res_tag_)
             if plot:
-                plt.imshow(imgList[idx[j]].transpose(1, 2, 0))
+                plt.imshow(imgList[idx[j]].squeeze().transpose(1, 2, 0))
                 plt.axis("off")
 
         # plt.tight_layout()
@@ -118,7 +118,7 @@ def crossModalQueries(embeddings=None, topk=5, mode1="au", mode2="im", use_tags=
 
 
 if __name__ == "__main__":
-    embedding_path = "save/embeddings/AVE_small_savedEmbeddings.pt"
+    embedding_path = "savedEmbeddings.pt"
     result_path = "./results/results.pickle"
     crossModalQueries(
         embeddings=embedding_path,
@@ -127,5 +127,5 @@ if __name__ == "__main__":
         mode2="au",
         use_tags=True,
         result_path=result_path,
-        plot=False,  # Warning: when topk is not 5, plot should be False
+        plot=True,  # Warning: when topk is not 5, plot should be False
     )

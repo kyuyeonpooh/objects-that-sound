@@ -33,9 +33,9 @@ def train(
     lr=5e-5,
     weight_decay=1e-5,
     use_lr_scheduler=True,
-    csv_log_dir="runs/",
-    model_save_dir="./save/avol_model",
-    model = "AVE",
+    csv_log_dir="log/",
+    model_save_dir="/hdd/save/AVOL_train",
+    model="AVE",
     **kwargs
 ):
     # gpu settings
@@ -54,7 +54,7 @@ def train(
     else:
         model = AVOLNet()
     model.to(device)
-    
+
     if model == "AVE":
         criterion = nn.CrossEntropyLoss()
     else:
@@ -122,7 +122,7 @@ def train(
                         else:
                             out, _ = model(img, aud)
                             label = label.float()
-                        loss = criterion(out, label)      
+                        loss = criterion(out, label)
                         if model == "AVE":
                             prediction = torch.argmax(out, dim=1)
                         else:
@@ -193,4 +193,6 @@ def train(
 
 
 if __name__ == "__main__":
-    train("AVOL_train_model", "./data/train/video", "./data/train/audio", "./data/val/video", "./data/val/audio", model="AVOL")
+    train(
+        "AVOL_train", "./data/train/video", "./data/train/audio", "./data/val/video", "./data/val/audio", model="AVOL"
+    )

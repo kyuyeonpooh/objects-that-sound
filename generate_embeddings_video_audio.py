@@ -77,9 +77,6 @@ def generateEmbeddingsForVideoAudio(model_name, use_cuda, use_tags):
                 audTagList.append(audTag)
                 audioSampleList.append(audSamples)
 
-        if i == 6000:
-            break
-
     if use_tags:
         torch.save(
             [imgList, audList, imgEmbedList, audEmbedList, vidTagList, audTagList, audioSampleList],
@@ -98,5 +95,5 @@ def getAVENet(use_cuda=True):
 
 
 if __name__ == "__main__":
-    model_path = "/hdd/save/AVE_train_augment_80.pt"
+    model_path = "/hdd/save/AVE_train_augment_/AVE_train_augment_80.pt"
     generateEmbeddingsForVideoAudio(model_name=model_path, use_cuda=True, use_tags=True)
