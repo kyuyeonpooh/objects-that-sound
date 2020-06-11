@@ -18,7 +18,8 @@ def AudioToAudioQueries(embeddings=None,
     #print(finalTag)
 
     t = torch.load(embeddings)
-    for i in range(len(t)):
+    
+    for i in [2, 3]:
         t[i] = np.concatenate(t[i])
 
     # Generalize here
@@ -35,16 +36,17 @@ def AudioToAudioQueries(embeddings=None,
 
     print("Loaded embeddings.")
 
-    print("Size of data : " + str(audList.shape[0]))
+    print("Size of data : " + str(len(audList)))
 
     res_queries = []
     res_tags = []
-    for i in range(audEmbedList.shape[0]):
+    for i in range(len(audEmbedList)):
         embed = audEmbedList[i]
         dist  = ((embed - audEmbedList)**2).sum(1)
         idx   = dist.argsort()[:topk]
         if use_tags:
-            print(audTagList[idx])
+            #print(audTagList[idx])
+            pass
     
         num_fig = idx.shape[0]
         if plot:
@@ -54,32 +56,36 @@ def AudioToAudioQueries(embeddings=None,
         if use_tags:
             if plot:
                 ax.set_title(finalTag[audTagList[idx[0]]])
-            res_query = finalTag[audTagList[idx[0]]]
+            #res_query = finalTag[audTagList[idx[0]]]
+            res_query = [finalTag[x] for x in audTagList[i]]
         if plot:
             plt.axis("off")
             plt.imshow(audList[idx[0]].transpose(1,2,0))
         
         res_tag = []
-        for j in range(1, num_fig):
-            ax = plt.subplot(2, 3, j+1 + int(j/3))
+        for j in range(1, num_fig + 1):
+            if plot:
+                ax = plt.subplot(2, 3, j+1 + int(j/3))
             if use_tags:
                 if plot:
                     ax.set_title(finalTag[audTagList[idx[j]]])
-                res_tag.append(finalTag[audTagList[idx[j]]])
+                #res_tag.append(finalTag[audTagList[idx[j]]])
+                res_tag_ = [finalTag[x] for x in audTagList[idx[j-1]]]
+                res_tag.append(res_tag_)
             if plot:
                 plt.imshow(audList[idx[j]].transpose(1,2,0))
                 plt.axis("off")
 
-        # plt.tight_layout()
-        #plt.draw()
-        #plt.pause(0.001)
-        #flag = True
-        #if flag:
-        #    input()
-        #    flag = False
-        # res = raw_input("Do you want to save?")
-        # if res == "y":
-        plt.savefig("results/embed_au_au_{0}.png".format(i))
+        if plot:
+            plt.draw()
+            plt.pause(0.001)
+            flag = True
+            if flag:
+                input()
+            flag = False
+            res = input("Do you want to save?")
+            if res == "y":
+                plt.savefig("results/embed_au_au_{0}.png".format(i))
         
         res_queries.append(res_query)
         res_tags.append(res_tag)    
@@ -87,8 +93,8 @@ def AudioToAudioQueries(embeddings=None,
 
 
 if __name__ == "__main__":
-    embedding_path = './save/embeddings/savedEmbeddings.pt'
-    result_path = './results/results.pickle'
+    embedding_path = './save/embeddings/AVE_small_savedEmbeddings.pt'
+    result_path = './results/results_au_au.pickle'
     AudioToAudioQueries(embeddings=embedding_path, 
                         topk=5,
                         use_tags=True, 
