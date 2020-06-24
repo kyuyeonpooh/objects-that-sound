@@ -97,19 +97,19 @@ def crossModalQueries(embeddings=None, topk=5, mode1="au", mode2="im", use_tags=
             if flag:
                 input()
                 flag = False
-        ans = input("Do you want to save? (quit: q): ")
-        if ans == "q":
-            break
-        elif ans == "y":
-            if mode1 == "au":
-                res.write(audioFiles[audioSampleList[i][0]] + "\n")
-                print(audioFiles[audioSampleList[i][0]])
-            else:
-                tmpFiles = map(lambda x: audioFiles[x], idx)
-                line = ", ".join(tmpFiles)
-                print(line)
-                res.write(line + "\n")
-            plt.savefig("results/embed_{0}_{1}_{2}.png".format(mode1, mode2, i))
+            ans = input("Do you want to save? (quit: q): ")
+            if ans == "q":
+                break
+            elif ans == "y":
+                if mode1 == "au":
+                    res.write(audioFiles[audioSampleList[i][0]] + "\n")
+                    print(audioFiles[audioSampleList[i][0]])
+                else:
+                    tmpFiles = map(lambda x: audioFiles[x], idx)
+                    line = ", ".join(tmpFiles)
+                    print(line)
+                    res.write(line + "\n")
+                plt.savefig("results/embed_{0}_{1}_{2}.png".format(mode1, mode2, i))
 
         res_queries.append(res_query)
         res_tags.append(res_tag)
@@ -119,13 +119,13 @@ def crossModalQueries(embeddings=None, topk=5, mode1="au", mode2="im", use_tags=
 
 if __name__ == "__main__":
     embedding_path = "savedEmbeddings.pt"
-    result_path = "./results/results.pickle"
+    result_path = "./results/results_a2i.pickle"
     crossModalQueries(
         embeddings=embedding_path,
-        topk=5,
-        mode1="im",
-        mode2="au",
+        topk=6000,
+        mode1="au",
+        mode2="im",
         use_tags=True,
         result_path=result_path,
-        plot=True,  # Warning: when topk is not 5, plot should be False
+        plot=False,  # Warning: when topk is not 5, plot should be False
     )
