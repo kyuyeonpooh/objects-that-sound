@@ -17,6 +17,7 @@ from tqdm import tqdm
 
 from model.avenet import AVENet
 from model.avolnet import AVOLNet
+from model.L3 import L3Net
 from utils.dataset import AudioSet
 
 
@@ -34,8 +35,8 @@ def train(
     weight_decay=1e-5,
     use_lr_scheduler=True,
     csv_log_dir="log/",
-    model_save_dir="/hdd/save/AVOL_train",
-    model="AVE",
+    model_save_dir="/hdd/save/L3_train_augment",
+    model_name="L3",
     **kwargs
 ):
     # gpu settings
@@ -49,13 +50,17 @@ def train(
     print("Current device:", device)
 
     # model, loss, and optimizer settings
-    if model == "AVE":
+    if model_name == "AVE":
         model = AVENet()
-    else:
+    elif model_name == "AVOL":
         model = AVOLNet()
+    elif model_name == "L3":
+        model = L3Net()
+    else:
+        raise ValueError("Unkown model name.")
     model.to(device)
 
-    if model == "AVE":
+    if model_name == "AVE" or model_name == "L3":
         criterion = nn.CrossEntropyLoss()
     else:
         criterion = nn.BCELoss()
@@ -89,7 +94,7 @@ def train(
         for i, (img, aud, label) in enumerate(train_loader):
             optimizer.zero_grad()
             img, aud, label = img.to(device), aud.to(device), label.to(device)
-            if model == "AVE":
+            if model_name == "AVE" or model_name == "L3":
                 out, _, _ = model(img, aud)
             else:
                 out, _ = model(img, aud)
@@ -98,7 +103,7 @@ def train(
             loss.backward()
             optimizer.step()
             with torch.no_grad():
-                if model == "AVE":
+                if model_name == "AVE" or model_name == "L3":
                     prediction = torch.argmax(out, dim=1)
                 else:
                     prediction = torch.round(out)
@@ -117,13 +122,13 @@ def train(
                 for j, (img, aud, label) in enumerate(val_loader):
                     img, aud, label = img.to(device), aud.to(device), label.to(device)
                     with torch.no_grad():
-                        if model == "AVE":
+                        if model_name == "AVE" or model_name == "L3":
                             out, _, _ = model(img, aud)
                         else:
                             out, _ = model(img, aud)
                             label = label.float()
                         loss = criterion(out, label)
-                        if model == "AVE":
+                        if model_name == "AVE" or model_name == "L3":
                             prediction = torch.argmax(out, dim=1)
                         else:
                             prediction = torch.round(out)
@@ -194,5 +199,10 @@ def train(
 
 if __name__ == "__main__":
     train(
-        "AVOL_train", "./data/train/video", "./data/train/audio", "./data/val/video", "./data/val/audio", model="AVOL"
+        "L3_train_augment",
+        "./data/train/video",
+        "./data/train/audio",
+        "./data/val/video",
+        "./data/val/audio",
+        model_name="L3",
     )
