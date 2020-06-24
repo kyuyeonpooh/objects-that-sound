@@ -87,20 +87,21 @@ def dist_to_score(ontology, distances, tags=[], max_dist=-1, debug=False):
     return scores
 
 
-def DCG(scores, alternate=True):
+def DCG(scores, k=30, alternate=False):
     """
     Description:
-        Return nDCG(normalized Discounted Cumulative Gain) with given score (relevance) list
+        Return DCG(Discounted Cumulative Gain) with given score (relevance) list
     Parameters:
-        scores: score list of K retrieved items (type: ndarray, len: K)
+        scores: score list (type: ndarray, len: N)
               [Example] [8, 6, 6, 8, 4, 7, ..., 2]
-                
+        k: length of retrieved items to calculate nDCG
     """
     # return zero if scores is None
     if scores is None or len(scores) < 1:
         return 0.0
 
     # set the number of items in scores
+    scores = scores[:k]
     n_scores = len(scores)
 
     # use alternative formula of DCG
@@ -113,13 +114,14 @@ def DCG(scores, alternate=True):
         return (scores / log2i).sum()
 
 
-def IDCG(scores, alternate=True):
+def IDCG(scores, k=30, alternate=False):
     """
     Description:
         Return IDCG(Ideal Discounted Cumulative Gain) with given score (relevance) list
     Parameters:
-        scores: score list of K retrieved items (type: ndarray, len: K)
-              [Example] [8, 6, 6, 8, 4, 7, ..., 2]  
+        scores: score list (type: ndarray, len: N)
+              [Example] [8, 6, 6, 8, 4, 7, ..., 2]
+        k: length of retrieved items to calculate nDCG
     """
 
     if scores is None or len(scores) < 1:
@@ -127,17 +129,18 @@ def IDCG(scores, alternate=True):
 
     # copy and sort scores in incresing order
     s = sorted(scores)
+    s = s[::-1][:k]
 
     # convert s in decresing order
-    return DCG(s[::-1], alternate)
+    return DCG(s, k, alternate)
 
 
-def NDCG(scores, alternate=True):
+def NDCG(scores, k=30, alternate=False):
     """
     Description:
         Return nDCG(normalized Discounted Cumulative Gain) with given score (relevance) list
     Parameters:
-        scores: score list of K retrieved items (type: ndarray, len: K)
+        scores: score list (type: ndarray, len: N)
               [Example] [8, 6, 6, 8, 4, 7, ..., 2]
                 
     """
@@ -146,35 +149,38 @@ def NDCG(scores, alternate=True):
         return 0.0
 
     # calculate idcg
-    idcg = IDCG(scores, alternate)
+    idcg = IDCG(scores, k, alternate)
     if idcg == 0:
         return 0.0
 
-    return DCG(scores, alternate) / idcg
+    return DCG(scores, k, alternate) / idcg
 
-def do_NDCG(ontology, queries, ret_items, tags):
+
+def do_NDCG(ontology, k, queries, ret_items, tags):
     """
     Description:
         Return Average nDCG for queries and ret_item
     Parameters:
         queries: list of N queries (type: list, dimension: 2D, shape: (N, ?))
               [Example] [[tag1, tag2, ..., tagK], ..., [tagA, tagB, ..., tagG]]
-        results: list of N retrieved items (type: list, dimension: 3D, shape: (N, ?, ?))
+        ret_items: list of N retrieved items (type: list, dimension: 3D, shape: (N, K, ?))
               [Example] [[[tagA, tagB, ..., tagG], ..., [tagX, tagY, ..., tagZ]], ... , [ ... ]]
                 
     """
     N = len(queries)
     ndcgs = 0
-    
+
     # get max_tree_distance
     max_tree_distance = get_max_tree_distance(ontology, tags, debug=False)
 
     # for every query, calculate nDCG
     for i in range(N):
-        distances = np.asarray([ get_min_tag_distance(ontology, queries[i], ret_items[i][j]) for j in range(len(ret_items[i])) ])
+        distances = np.asarray(
+            [get_min_tag_distance(ontology, queries[i], ret_items[i][j]) for j in range(len(ret_items[i]))]
+        )
         scores = dist_to_score(ontology, distances, max_dist=max_tree_distance)
-        ndcgs += NDCG(scores)
-    
+        ndcgs += NDCG(scores, k)
+
     return ndcgs / N
 
 
@@ -248,7 +254,7 @@ if __name__ == "__main__":
     ]
 
     ontology = Ontology(data_dir)
-
+    """
     # Calculate maximum tree distance between tags
     print("Calculate maximum tree distance between tags")
     max_dist = get_max_tree_distance(ontology, tags, debug=False)
@@ -281,26 +287,28 @@ if __name__ == "__main__":
     print("### Recall at K ###: ", recallAtK(target, results), end="\n\n")
 
     # Do get_min_tag_distance: example1
-    tags_x = ['Independent music', 'Drip']
-    tags_y = ['Drip']
+    tags_x = ["Independent music", "Drip"]
+    tags_y = ["Drip"]
     print("@@@ get_min_tag_distance1 @@@: ", get_min_tag_distance(ontology, tags_x, tags_y))
 
     # Do get_min_tag_distance: example2
-    tags_x = ['Piano', 'Guitar', 'Bass guitar']
-    tags_y = ['Accordion']
+    tags_x = ["Piano", "Guitar", "Bass guitar"]
+    tags_y = ["Accordion"]
     print("@@@ get_min_tag_distance2 @@@: ", get_min_tag_distance(ontology, tags_x, tags_y), end="\n\n")
-
+    """
     # Do average nDCG
     with open("metadata/all_tags.cls") as fi:
         tags = map(lambda x: x[:-1], fi.readlines())
         tags = dict((x, i) for i, x in enumerate(tags))
 
     file_names = [
-        'metadata/results_a2i.pickle', 'metadata/results_i2a.pickle', 
-        'metadata/results_a2i_30.pickle', 'metadata/results_i2a_30.pickle',
-        ]
-    
+        "results/results_i2a.pickle",
+        "results/results_a2i.pickle",
+        "results/results_i2i.pickle",
+        "results/results_a2a.pickle",
+    ]
+
     for f in file_names:
         queries, ret_items = load_result(f)
-        ndcgs = do_NDCG(ontology, queries, ret_items, tags)
-        print("### average nDCG:%s ###: " % (f), ndcgs, end="\n\n")
+        ndcgs = do_NDCG(ontology, 30, queries, ret_items, tags)
+        print("nDCG: %s" % (f), ndcgs, end="\n\n")
