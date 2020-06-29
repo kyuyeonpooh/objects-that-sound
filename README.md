@@ -41,6 +41,10 @@ More qualitative results are available in our slides provided below.
 ### 4. Sound Localization (Qualitative)
 <img src="material/localization.png">
 
+### 5. Embedding Visualization with t-SNE
+<img src="material/tsne.png">
+Embeddings with ● are from images, and embeddings with × are from audios.
+
 ### Acknowledgement
 We have gotten many insights of implementation from [this repository](https://github.com/rohitrango/objects-that-sound), thanks to [@rohitrango](https://github.com/rohitrango).
 
