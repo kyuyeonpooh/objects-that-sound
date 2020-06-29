@@ -86,8 +86,8 @@ def AudioToAudioQueries(embeddings=None, topk=5, use_tags=False, result_path=Non
 
 
 if __name__ == "__main__":
-    embedding_path = "savedEmbeddings.pt"
-    result_path = "./results/results_au_au.pickle"
+    embedding_path = "./embedding/L3_aug_inst.pt"
+    result_path = "./results/L3_aug_inst_a2a.pickle"
     AudioToAudioQueries(
         embeddings=embedding_path,
         topk=6000,

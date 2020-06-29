@@ -302,13 +302,13 @@ if __name__ == "__main__":
         tags = dict((x, i) for i, x in enumerate(tags))
 
     file_names = [
-        "results/results_i2a.pickle",
-        "results/results_a2i.pickle",
-        "results/results_i2i.pickle",
-        "results/results_a2a.pickle",
+        "./results/AVE_aug_ave_i2a.pickle",
+        "./results/AVE_aug_ave_a2i.pickle",
+        "./results/AVE_aug_ave_i2i.pickle",
+        "./results/AVE_aug_ave_a2a.pickle",
     ]
 
     for f in file_names:
         queries, ret_items = load_result(f)
-        ndcgs = do_NDCG(ontology, 30, queries, ret_items, tags)
+        ndcgs = do_NDCG(ontology, 5, queries, ret_items, tags)
         print("nDCG: %s" % (f), ndcgs, end="\n\n")

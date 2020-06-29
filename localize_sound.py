@@ -37,9 +37,9 @@ def localize_sound(model_path):
             img = img / img.max()
             img = 255 * img
             img = img.astype(np.uint8)
-            cv2.imwrite("origin_img.png", img)
+            cv2.imwrite("localization/origin_img_{}.png".format(i), img)
             result = overlay(img, loc[0][0])
-            cv2.imwrite("heatmap_result.png", result)
+            cv2.imwrite("localization/heatmap_result_{}.png".format(i), result)
             res = input("Continue?(y/n) : ")
 
             if res == "n":
@@ -49,6 +49,6 @@ def localize_sound(model_path):
 
 
 if __name__ == "__main__":
-    model_path = "/hdd/save/AVOL_train/AVOL_train_140.pt"
+    model_path = "./save/AVOL-Net_inst.pt"
 
     localize_sound(model_path)

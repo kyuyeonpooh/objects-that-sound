@@ -1,24 +1,30 @@
-from model.avenet import AVENet
-from torch.utils.data import DataLoader, Dataset
-from utils.util import reverseTransform
-from utils.dataset import AudioSet
 import os
+
 import torch
+from torch.utils.data import DataLoader, Dataset
+
+from model.L3 import L3Net
+from model.avenet import AVENet
+from utils.dataset import AudioSet
+from utils.util import reverseTransform
 
 
-def generateEmbeddingsForVideoAudio(model_name, use_cuda, use_tags):
+def generateEmbeddingsForVideoAudio(model_name, model_path, emb_path, use_cuda=True, use_tags=True):
     # Get video embeddings on the test set
     dataset = AudioSet("embedding", "./data/test/video", "./data/test/audio")
     dataloader = DataLoader(dataset, batch_size=1)
     print("Loading data.")
-    # for img, aud, res, vidTags, audTags, audioSample in dataloader:
-    # 	break
 
-    model = getAVENet(use_cuda)
+    if model_name == "AVE":
+        model = getAVENet(use_cuda)
+    elif model_name == "L3":
+        model = getL3Net(use_cuda)
+    else:
+        raise ValueError("Unknown model name.")
 
     # Load from before
-    if os.path.exists(model_name):
-        model.load_state_dict(torch.load(model_name))
+    if os.path.exists(model_path):
+        model.load_state_dict(torch.load(model_path))
         print("Loading from previous checkpoint.")
 
     imgList, audList, resList, vidTagList, audTagList = [], [], [], [], []
@@ -67,7 +73,6 @@ def generateEmbeddingsForVideoAudio(model_name, use_cuda, use_tags):
 
         if idx[0]:
             # img, aud = reverseTransform(img, aud)
-
             # imgList.append(img.data.cpu().numpy()[idx, :])
             # audList.append(aud.data.cpu().numpy()[idx, :])
             imgEmbedList.append(imgEmbed.data.cpu().numpy())
@@ -78,22 +83,41 @@ def generateEmbeddingsForVideoAudio(model_name, use_cuda, use_tags):
                 audioSampleList.append(audSamples)
 
     if use_tags:
-        torch.save(
-            [imgList, audList, imgEmbedList, audEmbedList, vidTagList, audTagList, audioSampleList],
-            "savedEmbeddings.pt",
-        )
+        torch.save([imgList, audList, imgEmbedList, audEmbedList, vidTagList, audTagList, audioSampleList], emb_path)
     else:
-        torch.save([imgList, audList, imgEmbedList, audEmbedList], "savedEmbeddings.pt")
+        torch.save([imgList, audList, imgEmbedList, audEmbedList], emb_path)
 
 
 def getAVENet(use_cuda=True):
     model = AVENet()
+    if use_cuda and torch.cuda.is_available():
+        device = torch.device("cuda")
+        print("Using GPU:", torch.cuda.get_device_name())
+    else:
+        if use_cuda:
+            print("Failed to find GPU, using CPU instead.")
+        device = torch.device("cpu")
     if use_cuda:
-        model = model.cuda()
+        model.to(device)
+    return model
 
+
+def getL3Net(use_cuda=True):
+    model = L3Net()
+    if use_cuda and torch.cuda.is_available():
+        device = torch.device("cuda")
+        print("Using GPU:", torch.cuda.get_device_name())
+    else:
+        if use_cuda:
+            print("Failed to find GPU, using CPU instead.")
+        device = torch.device("cpu")
+    if use_cuda:
+        model.to(device)
     return model
 
 
 if __name__ == "__main__":
-    model_path = "/hdd/save/AVE_train_augment_/AVE_train_augment_80.pt"
-    generateEmbeddingsForVideoAudio(model_name=model_path, use_cuda=True, use_tags=True)
+    model_name = "L3"
+    model_path = "./save/L3-Net_augment_inst.pt"
+    emb_path = "./embedding/L3_aug_inst.pt"
+    generateEmbeddingsForVideoAudio(model_name, model_path=model_path, emb_path=emb_path, use_cuda=True, use_tags=True)

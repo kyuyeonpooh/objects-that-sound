@@ -10,6 +10,7 @@ results/
 *.pt
 *.jpg
 *.png
+tsne.pdf
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

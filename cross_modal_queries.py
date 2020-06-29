@@ -37,7 +37,8 @@ def crossModalQueries(embeddings=None, topk=5, mode1="au", mode2="im", use_tags=
     print("Size of data : " + str(len(imgEmbedList)))
 
     # Open a file and store your queries here
-    res = open("results/results_{0}_{1}.txt".format(mode1, mode2), "w+")
+    if plot:
+        res = open("results/results_{0}_{1}.txt".format(mode1, mode2), "w+")
 
     assert mode1 != mode2
 
@@ -114,12 +115,13 @@ def crossModalQueries(embeddings=None, topk=5, mode1="au", mode2="im", use_tags=
         res_queries.append(res_query)
         res_tags.append(res_tag)
     save_result(result_path, res_queries, res_tags)
-    res.close()
+    if plot:
+        res.close()
 
 
 if __name__ == "__main__":
-    embedding_path = "savedEmbeddings.pt"
-    result_path = "./results/results_a2i.pickle"
+    embedding_path = "./embedding/L3_aug_inst.pt"
+    result_path = "./results/L3_aug_inst_a2i.pickle"
     crossModalQueries(
         embeddings=embedding_path,
         topk=6000,
