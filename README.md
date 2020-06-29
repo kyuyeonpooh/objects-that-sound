@@ -17,6 +17,7 @@ We use or construct **3 different dataset** to train and evaluate the models.
 - **AudioSet-Instruments:**
 - **AudioSet-Animal** 
 - **AVE-Dataset**
+
 Due to the resource limitation, we use 20% subset of **AudioSet-Instruments** suggested in the paper.
 
 Please refer to [**Final Report**](material/CS570_Final_Report_Team7.pdf) for more detailed explanations about each dataset.
