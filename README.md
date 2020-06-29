@@ -14,9 +14,9 @@ We implement **AVE-Net**, **AVOL-Net**, and also **L<sup>3</sup>-Net** which is 
 
 ### Dataset
 We use or construct **3 different dataset** to train and evaluate the models.
-- **AudioSet-Instruments:**
-- **AudioSet-Animal** 
-- **AVE-Dataset**
+- __*AudioSet-Instruments*__
+- __*AudioSet-Animal*__
+- __*AVE-Dataset*__
 
 Due to the resource limitation, we use 20% subset of **AudioSet-Instruments** suggested in the paper.
 
