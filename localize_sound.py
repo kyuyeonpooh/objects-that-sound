@@ -22,13 +22,15 @@ def localize_sound(model_path):
         print("Loading from previous checkpoint.")
 
     model.eval()
-    for i, data in enumerate(dataloader):
+    # 0: True, 1: False correspondence
+    # Audio-visual localization map on true positive pairs
+    for i, data in enumerate(dataloader):    
         img, aud, res = data
-        if res.item() == 0:
+        if res.item() != 0:  # Exclude false pairs
             continue
         with torch.no_grad():
             res, loc = model(img, aud)
-            if res.item() == 0:
+            if res.item() != 0:  # Exclude false negative pairs
                 continue
             img, aud = reverseTransform(img, aud)
             img = bgr2rgb(img)
