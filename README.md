@@ -63,10 +63,10 @@ Also, please refer to our [**Final Report**](material/CS570_Final_Report_Team7.p
 ### Contact
 We are welcoming any questions and issues of implementation. If you have any, please contact to e-mail below or leave a issue.
 Contributor | E-mail
------------- | -------------
+------------ | ------------
 Kyuyeon Kim | kyuyeonpooh@kaist.ac.kr
 Hyeongryeol Ryu | hy.ryu@kaist.ac.kr
 Yeonjae Kim | lion721@kaist.ac.kr
 
 ### Comment
-If you find this repository to be useful, please **Star** :star: or **Fork** :fork_and_knife: this repository.
+If you find this repository to be useful, please **Star** ⭐ or **Fork** 🍴 this repository.
